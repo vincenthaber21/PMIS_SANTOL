@@ -1,0 +1,15 @@
+Hello {{ user.get_full_name|default:user.username }},
+
+Equipment details were updated in {{ site_name }}.
+
+Property: {{ equipment.name }}
+Property Number: {{ equipment.property_number }}
+
+Changes:
+{% for label, old_value, new_value in changes %}- {{ label }}: {{ old_value }} -> {{ new_value }}
+{% endfor %}
+{% if updated_by %}
+Updated by: {{ updated_by.get_full_name|default:updated_by.username }}
+{% endif %}
+
+View equipment: {{ equipment_url }}

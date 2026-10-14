@@ -1,0 +1,16 @@
+{% extends "email/base.html" %}
+
+{% block email_title %}Property {{ action_label }} — {{ site_short_name }}{% endblock %}
+
+{% block email_content %}
+<p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Hello {{ user.get_full_name|default:user.username }},</p>
+<p style="margin:0 0 20px;font-size:15px;line-height:1.6;">You have been <strong>{{ action_label }}</strong> the following property in <strong>{{ site_name }}</strong>.</p>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;margin:0 0 24px;">
+  <tr>
+    <td style="padding:20px 20px;font-size:14px;line-height:1.7;color:#334155;white-space:pre-wrap;font-family:Arial,Helvetica,sans-serif;">{{ details_text }}</td>
+  </tr>
+</table>
+
+{% include "email/includes/button.html" with url=equipment_url label="View equipment" %}
+{% endblock %}

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Print QR Codes ({{ options.size_inches }}×{{ options.size_inches }}) — {{ total_count }} item{{ total_count|pluralize }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --qr-size: {{ options.size_inches }}in;
+      --qr-spacing: {{ options.spacing_inches }}in;
+      --qr-cols: {{ options.columns }};
+      --qr-name-font: {{ options.name_font_pt }}pt;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #e8e8e8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .toolbar {
+      margin-bottom: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .toolbar button,
+    .toolbar a {
+      font-size: 14px;
+      padding: 8px 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      text-decoration: none;
+      color: #333;
+    }
+
+    .toolbar button.primary {
+      background: #0d6efd;
+      color: #fff;
+      border-color: #0b5ed7;
+    }
+
+    .print-meta {
+      text-align: center;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .print-sheet {
+      background: #fff;
+      padding: 0.25in;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--qr-cols), var(--qr-size));
+      grid-auto-rows: auto;
+      column-gap: var(--qr-spacing);
+      row-gap: var(--qr-spacing);
+    }
+
+    .qr-cell {
+      width: var(--qr-size);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      page-break-inside: avoid;
+    }
+
+    .qr-cell img {
+      width: var(--qr-size);
+      height: var(--qr-size);
+      display: block;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .qr-name {
+      width: var(--qr-size);
+      margin-top: 1px;
+      font-size: var(--qr-name-font);
+      line-height: 1.1;
+      font-weight: 600;
+      text-align: center;
+      color: #000;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: break-word;
+    }
+
+    .empty-state {
+      padding: 2rem;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+    }
+
+    @page {
+      size: letter;
+      margin: 0.25in;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+
+      .toolbar,
+      .print-meta {
+        display: none;
+      }
+
+      .print-sheet {
+        box-shadow: none;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" class="primary" onclick="window.print()">Print QR Codes</button>
+    <a href="{{ back_url }}">Back to Equipment List</a>
+  </div>
+
+  <div class="print-meta">
+    <strong>{{ total_count }}</strong> QR code{{ total_count|pluralize }}
+    at {{ options.size_inches }}×{{ options.size_inches }} inch — {{ options.resolution_label }}
+    — spacing {{ options.spacing_inches }} in
+    {% if options.show_name %}with equipment name{% endif %}
+    {% if filter_summary %} — {{ filter_summary|join:" · " }}{% endif %}
+  </div>
+
+  <div class="print-sheet">
+    {% if qr_items %}
+    <div class="qr-grid">
+      {% for item in qr_items %}
+      <div class="qr-cell" title="{{ item.property_number }}">
+        <img src="{{ item.qr_code_data }}" alt="QR {{ item.property_number }}">
+        {% if options.show_name %}
+        <div class="qr-name">{{ item.name }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      No equipment matched your filters. Adjust category or equipment type on the equipment list, then try again.
+    </div>
+    {% endif %}
+  </div>
+
+  {% if qr_items %}
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () { window.print(); }, 300);
+    });
+  </script>
+  {% endif %}
+</body>
+</html>

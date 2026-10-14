@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}Borrow Request BR-{{ br.pk|stringformat:"04d" }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1>BR-{{ br.pk|stringformat:"04d" }}</h1>
+    <div class="breadcrumb"><a href="{% url 'borrowing:list' %}">Borrowing</a> / Detail</div>
+  </div>
+  <div>{{ br.approval_status|status_badge }}</div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card mb-4">
+      <div class="card-header">Request Details</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6"><small class="text-muted d-block">Employee</small><strong>{{ br.employee.get_full_name|default:br.employee.username }}</strong></div>
+          <div class="col-md-6"><small class="text-muted d-block">Department</small>{{ br.department|default:"—" }}</div>
+          <div class="col-md-6"><small class="text-muted d-block">Equipment</small><a href="{% url 'equipment:detail' br.equipment.pk %}">{{ br.equipment.name }}</a></div>
+          <div class="col-md-6"><small class="text-muted d-block">Quantity</small>{{ br.quantity }}</div>
+          <div class="col-md-6"><small class="text-muted d-block">Borrow Date</small>{{ br.borrow_date }}</div>
+          <div class="col-md-6"><small class="text-muted d-block">Expected Return</small>{{ br.expected_return }}{% if br.is_overdue %}<span class="badge bg-danger ms-1">OVERDUE</span>{% endif %}</div>
+          <div class="col-md-6"><small class="text-muted d-block">Actual Return</small>{{ br.actual_return|default:"Not yet returned" }}</div>
+          <div class="col-md-6"><small class="text-muted d-block">Purpose</small>{{ br.purpose|default:"—" }}</div>
+          {% if br.approver %}
+          <div class="col-md-6"><small class="text-muted d-block">Approved By</small>{{ br.approver }}</div>
+          <div class="col-md-6"><small class="text-muted d-block">Approver Notes</small>{{ br.approver_notes|default:"—" }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if br.approval_status == 'Approved' and not br.actual_return %}
+    <form method="post" action="{% url 'borrowing:return' br.pk %}">
+      {% csrf_token %}
+      <button class="btn btn-success mb-3" onclick="return confirm('Confirm return?')">
+        <i class="bi bi-box-arrow-in-left me-1"></i>Mark as Returned
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if form %}
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">Approval Action</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label">Decision *</label>{{ form.action }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>{{ form.notes }}
+          </div>
+          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2 me-1"></i>Submit Decision</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

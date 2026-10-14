@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}ICS Register{% endblock %}
+
+{% block extra_css %}
+<style>
+  .ics-export-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+  .ics-export-group {
+    background: #f8fafc;
+    border: 1px solid #edf1f7;
+    border-radius: 10px;
+    padding: 1rem;
+  }
+  .ics-export-group__label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748B;
+    margin-bottom: 0.65rem;
+  }
+  .ics-export-group .btn-group { width: 100%; }
+  .ics-export-group .btn { flex: 1; }
+  .ics-filter-bar .form-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748B;
+    margin-bottom: 0.35rem;
+  }
+  .ics-table-empty {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: #94A3B8;
+  }
+  .ics-table-empty i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+  }
+  .ics-print-dropdown .dropdown-item {
+    font-size: 0.8125rem;
+    padding: 0.45rem 1rem;
+  }
+  .ics-print-dropdown .dropdown-header {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94A3B8;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-wrap align-items-start justify-content-between gap-3">
+  <div class="d-flex align-items-start">
+    <span class="page-icon"><i class="bi bi-journal-text"></i></span>
+    <div>
+      <h1>ICS Register</h1>
+      <div class="breadcrumb">
+        <a href="{% url 'reports:index' %}">Reports</a> /
+        <a href="{% url 'reports:coa_forms' %}">COA Forms</a> / ICS Register
+      </div>
+      <p class="text-muted small mt-2 mb-0">
+        Semi-expendable and low-value items below the ₱50,000 capitalization threshold.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:var(--primary);">
+      <div class="kpi-top">
+        <span class="kpi-label">ICS-Eligible Items</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-box-seam"></i></span>
+      </div>
+      <div class="kpi-value">{{ total_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:#059669;">
+      <div class="kpi-top">
+        <span class="kpi-label">With ICS Slip</span>
+        <span class="kpi-icon" style="background:#ECFDF5;color:#059669;"><i class="bi bi-file-earmark-check"></i></span>
+      </div>
+      <div class="kpi-value">{{ ics_count }}</div>
+      {% if total_count %}
+      <div class="kpi-caption">{{ ics_count }} of {{ total_count }} generated</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:var(--accent);">
+      <div class="kpi-top">
+        <span class="kpi-label">COA Forms</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--accent);"><i class="bi bi-file-earmark-ruled"></i></span>
+      </div>
+      <div class="d-flex flex-wrap gap-1 mt-1">
+        <span class="badge-soft badge-soft-info">Appendix 59 — ICS</span>
+        <span class="badge-soft badge-soft-danger">Annex A.2 — SPC</span>
+        <span class="badge-soft badge-soft-neutral">Annex A.3 — SPLC</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if total_count %}
+<!-- Bulk Export -->
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-download me-2 text-primary"></i>Bulk Export
+    <span class="card-subtitle">Download all filtered records</span>
+  </div>
+  <div class="card-body">
+    <div class="ics-export-grid">
+      <div class="ics-export-group">
+        <div class="ics-export-group__label">Inventory Custodian Slip</div>
+        <div class="btn-group">
+          <a href="{% url 'reports:ics_print_all' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+             class="btn btn-primary btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+          </a>
+          <a href="{% url 'reports:ics_export_all_excel' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+             class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+          </a>
+        </div>
+      </div>
+      <div class="ics-export-group">
+        <div class="ics-export-group__label">Semi-Expendable Property Card</div>
+        <div class="btn-group">
+          <a href="{% url 'reports:spc_print_all' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+             class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+          </a>
+          <a href="{% url 'reports:spc_export_all_excel' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+             class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+          </a>
+        </div>
+      </div>
+      <div class="ics-export-group">
+        <div class="ics-export-group__label">Semi-Expendable Property Ledger Card</div>
+        <div class="btn-group">
+          <a href="{% url 'reports:splc_print_all' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+             class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+          </a>
+          <a href="{% url 'reports:splc_export_all_excel' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+             class="btn btn-outline-success btn-sm">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-funnel me-2 text-primary"></i>Filters</span>
+    {% if selected_fund or selected_year or selected_status or selected_classification or selected_department %}
+    <span class="badge-soft badge-soft-info">Active filters applied</span>
+    {% endif %}
+  </div>
+  <div class="card-body ics-filter-bar">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Fund</label>
+        <select name="fund" class="form-select form-select-sm">
+          <option value="">All Funds</option>
+          {% for val, label in fund_choices %}
+          <option value="{{ val }}" {% if selected_fund == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Year</label>
+        <select name="year" class="form-select form-select-sm">
+          <option value="">All Years</option>
+          {% for y in year_choices %}
+          <option value="{{ y }}" {% if selected_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Classification</label>
+        <select name="classification" class="form-select form-select-sm">
+          <option value="">All Classifications</option>
+          {% for val, label in classification_choices %}
+          <option value="{{ val }}" {% if selected_classification == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}
+          {% if val != 'Retired' %}
+          <option value="{{ val }}" {% if selected_status == val %}selected{% endif %}>{{ label }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for dept in department_choices %}
+          <option value="{{ dept.pk }}" {% if selected_department == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-lg-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+          <i class="bi bi-search me-1"></i>Apply
+        </button>
+        <a href="{% url 'reports:ics_register' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Register Table -->
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-table me-2 text-primary"></i>Inventory Custodian Slips</span>
+    <span class="badge-soft badge-soft-neutral">{{ total_count }} record{{ total_count|pluralize }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>ICS No.</th>
+            <th>Property No.</th>
+            <th>Description</th>
+            <th>Classification</th>
+            <th>Entity / Fund</th>
+            <th>Supplier</th>
+            <th>P.O. #</th>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Received By</th>
+            <th>Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for eq in equipment_list %}
+          {% with ics=eq.active_ics %}
+          <tr class="{% if eq.status == 'Borrowed' %}table-info{% elif eq.status == 'Maintenance' %}table-warning{% endif %}">
+            <td>
+              {% if ics %}
+              <code class="prop-chip">{{ ics.ics_no }}</code>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'equipment:detail' eq.pk %}" class="text-decoration-none">
+                <code class="prop-chip">{{ eq.property_number }}</code>
+              </a>
+            </td>
+            <td>
+              <span class="fw-500">{{ eq.name }}</span>
+              {% if eq.brand %}<small class="text-muted d-block">{{ eq.brand }}{% if eq.model %} {{ eq.model }}{% endif %}</small>{% endif %}
+            </td>
+            <td>{{ eq.classification|classification_badge }}</td>
+            <td>
+              <small>
+                {% if ics %}{{ ics.entity_name }}{% else %}{{ eq.department|default:"—" }}{% endif %}
+                <span class="text-muted d-block">
+                  {% if ics %}{{ ics.fund_cluster|default:"—" }} / {{ ics.fund }}{% else %}{{ eq.fund }}{% endif %}
+                </span>
+              </small>
+            </td>
+            <td><small class="text-muted">{{ eq.supplier|default:"—" }}</small></td>
+            <td><small class="text-muted">{{ eq.purchase_order_no|default:"—" }}</small></td>
+            <td><small>{{ eq.purchase_date|default:"—" }}</small></td>
+            <td>
+              <span class="fw-500">
+                {% if eq.acquisition_cost %}{{ eq.acquisition_cost|peso }}{% else %}{{ eq.purchase_cost|peso }}{% endif %}
+              </span>
+            </td>
+            <td>
+              <small>
+                {% if ics %}
+                {{ ics.received_by.get_full_name|default:ics.received_by.username }}
+                {% elif eq.assigned_user %}
+                {{ eq.assigned_user.get_full_name|default:eq.assigned_user.username }}
+                {% else %}—{% endif %}
+              </small>
+            </td>
+            <td>{{ eq.status|status_badge }}</td>
+            <td class="text-end">
+              <div class="dropdown ics-print-dropdown d-inline-block">
+                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                  <i class="bi bi-printer me-1"></i>Print
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><h6 class="dropdown-header">ICS — Appendix 59</h6></li>
+                  <li>
+                    {% if ics %}
+                    <a class="dropdown-item" href="{% url 'reports:ics_print' ics.pk %}">
+                      <i class="bi bi-file-earmark-pdf me-2 text-primary"></i>Print ICS (PDF)
+                    </a>
+                    {% else %}
+                    <a class="dropdown-item" href="{% url 'reports:ics_print_equipment' eq.pk %}">
+                      <i class="bi bi-file-earmark-pdf me-2 text-secondary"></i>Generate &amp; Print ICS
+                    </a>
+                    {% endif %}
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><h6 class="dropdown-header">SPC — Annex A.2</h6></li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'reports:coa_spc' eq.pk %}">
+                      <i class="bi bi-file-earmark-pdf me-2 text-danger"></i>SPC (PDF)
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'reports:coa_spc_excel' eq.pk %}">
+                      <i class="bi bi-file-earmark-excel me-2 text-success"></i>SPC (Excel)
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li><h6 class="dropdown-header">SPLC — Annex A.3</h6></li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'reports:coa_splc' eq.pk %}">
+                      <i class="bi bi-file-earmark-pdf me-2 text-secondary"></i>SPLC (PDF)
+                    </a>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="{% url 'reports:coa_splc_excel' eq.pk %}">
+                      <i class="bi bi-file-earmark-excel me-2 text-success"></i>SPLC (Excel)
+                    </a>
+                  </li>
+                </ul>
+              </div>
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="12">
+              <div class="ics-table-empty">
+                <i class="bi bi-inbox"></i>
+                <div>No ICS-eligible equipment found.</div>
+                <small>Add items below the ₱50,000 capitalization threshold to appear here.</small>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

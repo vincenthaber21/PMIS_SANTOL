@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}PAR Register{% endblock %}
+
+{% block extra_css %}
+<style>
+  .par-export-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  .par-export-bar .btn-group { flex: 1 1 auto; min-width: 200px; }
+  .par-export-bar .btn-group .btn { flex: 1; }
+  .par-filter-bar .form-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748B;
+    margin-bottom: 0.35rem;
+  }
+  .par-table-empty {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: #94A3B8;
+  }
+  .par-table-empty i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-wrap align-items-start justify-content-between gap-3">
+  <div class="d-flex align-items-start">
+    <span class="page-icon"><i class="bi bi-journal-check"></i></span>
+    <div>
+      <h1>PAR Register</h1>
+      <div class="breadcrumb">
+        <a href="{% url 'reports:index' %}">Reports</a> /
+        <a href="{% url 'reports:coa_forms' %}">COA Forms</a> / PAR Register
+      </div>
+      <p class="text-muted small mt-2 mb-0">
+        Property, Plant, and Equipment (PPE) at or above the ₱50,000 capitalization threshold.
+        {% if show_all_scope %}
+        Showing all PAR-eligible equipment across the organization.
+        {% else %}
+        Showing PAR-eligible equipment assigned to you only.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:var(--primary);">
+      <div class="kpi-top">
+        <span class="kpi-label">PAR-Eligible Items</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-building"></i></span>
+      </div>
+      <div class="kpi-value">{{ total_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:{% if due_count %}#D97706{% else %}#059669{% endif %};">
+      <div class="kpi-top">
+        <span class="kpi-label">Due for Renewal</span>
+        <span class="kpi-icon" style="background:{% if due_count %}#FFFBEB{% else %}#ECFDF5{% endif %};color:{% if due_count %}#D97706{% else %}#059669{% endif %};">
+          <i class="bi bi-{% if due_count %}exclamation-triangle{% else %}check-circle{% endif %}"></i>
+        </span>
+      </div>
+      <div class="kpi-value">{{ due_count }}</div>
+      {% if due_count %}
+      <div class="kpi-caption">Requires attention</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:var(--accent);">
+      <div class="kpi-top">
+        <span class="kpi-label">With PAR Issued</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--accent);"><i class="bi bi-file-earmark-check"></i></span>
+      </div>
+      <div class="kpi-value">{{ par_count }}</div>
+      {% if total_count %}
+      <div class="kpi-caption">{{ par_count }} of {{ total_count }} issued</div>
+      {% else %}
+      <div class="mt-1"><span class="badge-soft badge-soft-info">Appendix 71 — PAR</span></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if total_count and show_all_scope %}
+<!-- Bulk Export -->
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-download me-2 text-primary"></i>Bulk Export
+    <span class="card-subtitle">Download all filtered PAR records</span>
+  </div>
+  <div class="card-body">
+    <div class="par-export-bar">
+      <div class="btn-group">
+        <a href="{% url 'reports:par_print_all' %}?fund={{ selected_fund }}&year={{ selected_year }}&property_status={{ selected_property_status }}&department={{ selected_department }}"
+           class="btn btn-primary btn-sm">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Download All PARs (PDF)
+        </a>
+        <a href="{% url 'reports:par_export_all_excel' %}?fund={{ selected_fund }}&year={{ selected_year }}&property_status={{ selected_property_status }}&department={{ selected_department }}"
+           class="btn btn-outline-success btn-sm">
+          <i class="bi bi-file-earmark-excel me-1"></i>Download All PARs (Excel)
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-funnel me-2 text-primary"></i>Filters</span>
+    {% if selected_fund or selected_year or selected_property_status or selected_department %}
+    <span class="badge-soft badge-soft-info">Active filters applied</span>
+    {% endif %}
+  </div>
+  <div class="card-body par-filter-bar">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Fund</label>
+        <select name="fund" class="form-select form-select-sm">
+          <option value="">All Funds</option>
+          {% for val, label in fund_choices %}
+          <option value="{{ val }}" {% if selected_fund == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Year</label>
+        <select name="year" class="form-select form-select-sm">
+          <option value="">All Years</option>
+          {% for y in year_choices %}
+          <option value="{{ y }}" {% if selected_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <label class="form-label">Property Status</label>
+        <select name="property_status" class="form-select form-select-sm">
+          <option value="">All Property Status</option>
+          {% for ps in property_status_choices %}
+          <option value="{{ ps.pk }}" {% if selected_property_status == ps.pk|stringformat:"s" %}selected{% endif %}>{{ ps.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for dept in department_choices %}
+          <option value="{{ dept.pk }}" {% if selected_department == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-lg-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+          <i class="bi bi-search me-1"></i>Apply
+        </button>
+        <a href="{% url 'reports:par_register' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Register Table -->
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-table me-2 text-primary"></i>Property Acknowledgment Receipts</span>
+    <span class="badge-soft badge-soft-neutral">{{ total_count }} record{{ total_count|pluralize }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>PAR No.</th>
+            <th>Property No.</th>
+            <th>Description</th>
+            <th>Fund</th>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>End User</th>
+            <th>Renewal Due</th>
+            <th>Property Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for eq in equipment_list %}
+          {% with par=eq.active_par %}
+          <tr class="{% if par and par.status == 'Due for Renewal' %}table-warning{% elif eq.status == 'Borrowed' %}table-info{% elif eq.status == 'Maintenance' %}table-warning{% endif %}">
+            <td>
+              {% if par %}
+              <code class="prop-chip">{{ par.par_no }}</code>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'equipment:detail' eq.pk %}" class="text-decoration-none">
+                <code class="prop-chip">{{ eq.property_number }}</code>
+              </a>
+            </td>
+            <td>
+              <span class="fw-500">{{ eq.name }}</span>
+              {% if eq.brand %}<small class="text-muted d-block">{{ eq.brand }}{% if eq.model %} {{ eq.model }}{% endif %}</small>{% endif %}
+            </td>
+            <td><small>{{ eq.fund|default:"—" }}</small></td>
+            <td>
+              <small>{% if par %}{{ par.date_issued }}{% else %}{{ eq.purchase_date|default:"—" }}{% endif %}</small>
+            </td>
+            <td>
+              <span class="fw-500">
+                {% if eq.acquisition_cost %}{{ eq.acquisition_cost|peso }}{% else %}{{ eq.purchase_cost|peso }}{% endif %}
+              </span>
+            </td>
+            <td>
+              <small>
+                {% if par %}
+                {{ par.end_user.get_full_name|default:par.end_user.username }}
+                {% elif eq.assigned_user %}
+                {{ eq.assigned_user.get_full_name|default:eq.assigned_user.username }}
+                {% else %}—{% endif %}
+              </small>
+            </td>
+            <td>
+              {% if par %}
+              <small class="{% if par.status == 'Due for Renewal' %}text-warning fw-500{% endif %}">{{ par.renewal_due_date }}</small>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>{{ eq.property_status|property_status_badge }}</td>
+            <td class="text-end">
+              {% if par %}
+              <a href="{% url 'reports:par_print' par.pk %}" class="btn btn-sm btn-outline-primary" title="Print PAR">
+                <i class="bi bi-printer me-1"></i>Print
+              </a>
+              {% else %}
+              <a href="{% url 'reports:par_print_equipment' eq.pk %}" class="btn btn-sm btn-outline-secondary" title="Generate &amp; Print PAR">
+                <i class="bi bi-printer me-1"></i>Generate
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+          {% empty %}
+          <tr>
+            <td colspan="10">
+              <div class="par-table-empty">
+                <i class="bi bi-inbox"></i>
+                <div>
+                  {% if show_all_scope %}
+                  No PAR-eligible equipment found.
+                  {% else %}
+                  No PAR-eligible equipment is assigned to you.
+                  {% endif %}
+                </div>
+                <small>Add PPE items at or above the ₱50,000 capitalization threshold to appear here.</small>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

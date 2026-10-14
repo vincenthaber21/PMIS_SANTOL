@@ -1,0 +1,165 @@
+<style>
+  .equipment-update-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(15, 23, 42, 0.48);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .equipment-update-overlay__panel {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.75rem 2rem;
+    text-align: center;
+    min-width: 300px;
+    max-width: 360px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  }
+  .equipment-update-overlay__steps {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 0;
+    text-align: left;
+    font-size: 0.82rem;
+  }
+  .equipment-update-overlay__steps li {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #94a3b8;
+    padding: 0.28rem 0;
+  }
+  .equipment-update-overlay__steps li.is-active {
+    color: #1e293b;
+    font-weight: 600;
+  }
+  .equipment-update-overlay__steps li.is-done {
+    color: #059669;
+  }
+  .equipment-update-overlay__steps .step-icon {
+    width: 1.1rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+</style>
+
+<div id="equipmentUpdateOverlay" class="equipment-update-overlay d-none" aria-live="polite" aria-busy="true">
+  <div class="equipment-update-overlay__panel">
+    <div class="spinner-border text-success mb-2" role="status" aria-hidden="true"></div>
+    <div class="fw-semibold" id="equipmentUpdateOverlayTitle">Updating equipment…</div>
+    <div class="text-muted small mt-1" id="equipmentUpdateOverlayHint">Please wait while changes are saved.</div>
+    <ul class="equipment-update-overlay__steps" id="equipmentUpdateOverlaySteps"></ul>
+  </div>
+</div>
+
+<script>
+(function () {
+  const overlay = document.getElementById('equipmentUpdateOverlay');
+  if (!overlay) return;
+
+  const titleEl = document.getElementById('equipmentUpdateOverlayTitle');
+  const hintEl = document.getElementById('equipmentUpdateOverlayHint');
+  const stepsEl = document.getElementById('equipmentUpdateOverlaySteps');
+  let stepTimer = null;
+
+  function clearStepTimer() {
+    if (stepTimer) {
+      clearInterval(stepTimer);
+      stepTimer = null;
+    }
+  }
+
+  function renderSteps(steps, activeIndex) {
+    if (!stepsEl) return;
+    stepsEl.innerHTML = '';
+    steps.forEach(function (label, index) {
+      const item = document.createElement('li');
+      let icon = '○';
+      let stateClass = '';
+      if (index < activeIndex) {
+        icon = '✓';
+        stateClass = 'is-done';
+      } else if (index === activeIndex) {
+        icon = '●';
+        stateClass = 'is-active';
+      }
+      item.className = stateClass;
+      item.innerHTML = '<span class="step-icon">' + icon + '</span><span>' + label + '</span>';
+      stepsEl.appendChild(item);
+    });
+  }
+
+  function showUpdateOverlay(title, hint, steps) {
+    clearStepTimer();
+    titleEl.textContent = title || 'Updating equipment…';
+    hintEl.textContent = hint || 'Please wait while changes are saved.';
+    overlay.classList.remove('d-none');
+    document.body.style.overflow = 'hidden';
+
+    const stepLabels = steps && steps.length ? steps : ['Saving changes', 'Updating QR code', 'Refreshing page'];
+    let activeIndex = 0;
+    renderSteps(stepLabels, activeIndex);
+
+    stepTimer = setInterval(function () {
+      if (activeIndex < stepLabels.length - 1) {
+        activeIndex += 1;
+        renderSteps(stepLabels, activeIndex);
+      }
+    }, 1100);
+  }
+
+  function setSubmitButtonsLoading(form, loading) {
+    form.querySelectorAll('button[type="submit"]').forEach(function (button) {
+      button.disabled = loading;
+      if (loading) {
+        if (!button.dataset.loadingOriginalHtml) {
+          button.dataset.loadingOriginalHtml = button.innerHTML;
+        }
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Saving…';
+      } else if (button.dataset.loadingOriginalHtml) {
+        button.innerHTML = button.dataset.loadingOriginalHtml;
+      }
+    });
+  }
+
+  document.querySelectorAll('.js-equipment-update-form').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      if (form.dataset.loadingDisabled === 'true') {
+        return;
+      }
+
+      if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        event.preventDefault();
+        form.classList.add('was-validated');
+        const firstInvalid = form.querySelector(':invalid');
+        if (firstInvalid) {
+          firstInvalid.focus();
+        }
+        return;
+      }
+
+      const title = form.getAttribute('data-loading-title') || 'Updating equipment…';
+      const hint = form.getAttribute('data-loading-hint') || 'Please wait while changes are saved.';
+      const stepsRaw = form.getAttribute('data-loading-steps');
+      const steps = stepsRaw ? stepsRaw.split('|').map(function (step) { return step.trim(); }).filter(Boolean) : null;
+
+      setSubmitButtonsLoading(form, true);
+      showUpdateOverlay(title, hint, steps);
+    });
+  });
+
+  window.addEventListener('pageshow', function (event) {
+    if (event.persisted) {
+      clearStepTimer();
+      overlay.classList.add('d-none');
+      document.body.style.overflow = '';
+      document.querySelectorAll('.js-equipment-update-form').forEach(function (form) {
+        setSubmitButtonsLoading(form, false);
+      });
+    }
+  });
+})();
+</script>

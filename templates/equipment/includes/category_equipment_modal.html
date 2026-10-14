@@ -1,0 +1,131 @@
+<div class="modal fade" id="addCategoryEquipmentModal" tabindex="-1"
+     aria-labelledby="addCategoryEquipmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border-radius:12px;">
+      <form method="post" id="categoryEquipmentForm" action="" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="category" id="catEqCategoryId" value="">
+        <input type="hidden" name="purchase_cost" id="catEqPurchaseCost" value="0">
+        {% if equipment_form and equipment_form.property_status %}
+        {{ equipment_form.property_status }}
+        {% endif %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-600" id="addCategoryEquipmentModalLabel">
+            <i class="bi bi-pc-display me-2"></i>Add Equipment
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="cat-eq-category-banner mb-3">
+            <span class="text-muted small d-block mb-1">Category</span>
+            <strong id="catEqCategoryLabel">—</strong>
+            <span class="cat-code ms-2" id="catEqCategoryCode"></span>
+          </div>
+
+          {% if equipment_form and equipment_form.errors %}
+          <div class="alert alert-danger py-2" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Please complete all required fields before saving.
+          </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="catEqPropertyNumber">Property Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="catEqPropertyNumber" name="property_number"
+                     readonly placeholder="Auto-generated">
+              <div class="small mt-1 text-danger d-none" id="catEqPropertyNumberError"></div>
+              {% if equipment_form and equipment_form.property_number.errors %}
+              <div class="text-danger small">{{ equipment_form.property_number.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label" for="catEqName">Article/Item Name <span class="text-danger">*</span></label>
+              <select class="form-select" id="catEqName" name="name" required>
+                <option value="">Select Article/Item Name</option>
+              </select>
+              <div class="form-text" id="catEqNameHint">Loading items for this category…</div>
+              {% if equipment_form and equipment_form.name.errors %}
+              <div class="text-danger small">{{ equipment_form.name.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="catEqQuantity">Quantity <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="catEqQuantity" name="quantity"
+                     min="1" value="{{ equipment_form.quantity.value|default:'1' }}" required>
+              {% if equipment_form and equipment_form.quantity.errors %}
+              <div class="text-danger small">{{ equipment_form.quantity.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="catEqUnit">Unit Measure <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="catEqUnit" name="unit"
+                     value="{{ equipment_form.unit.value|default:'unit' }}" required>
+              {% if equipment_form and equipment_form.unit.errors %}
+              <div class="text-danger small">{{ equipment_form.unit.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="catEqAcquisitionCost">Unit Value <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" id="catEqAcquisitionCost" name="acquisition_cost"
+                     min="0.01" step="0.01" placeholder="0.00" required
+                     value="{{ equipment_form.acquisition_cost.value|default_if_none:'' }}">
+              {% if equipment_form and equipment_form.acquisition_cost.errors %}
+              <div class="text-danger small">{{ equipment_form.acquisition_cost.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label" for="catEqPurchaseDate">Date Acquired <span class="text-danger">*</span></label>
+              <input type="date" class="form-control" id="catEqPurchaseDate" name="purchase_date" required
+                     value="{{ equipment_form.purchase_date.value|default_if_none:'' }}">
+              {% if equipment_form and equipment_form.purchase_date.errors %}
+              <div class="text-danger small">{{ equipment_form.purchase_date.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="catEqFundSource">Fund Source <span class="text-danger">*</span></label>
+              <select class="form-select" id="catEqFundSource" name="fund_source" required>
+                <option value="">Select Fund Source</option>
+                {% for fs in fund_sources %}
+                <option value="{{ fs.pk }}"
+                  {% if equipment_form and equipment_form.fund_source.value|stringformat:"s" == fs.pk|stringformat:"s" %}selected{% endif %}>
+                  {{ fs.display_label }}
+                </option>
+                {% endfor %}
+              </select>
+              {% if equipment_form and equipment_form.fund_source.errors %}
+              <div class="text-danger small">{{ equipment_form.fund_source.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="catEqDepartment">Location <span class="text-danger">*</span></label>
+              <select class="form-select" id="catEqDepartment" name="department" required>
+                <option value="">Select Location</option>
+                {% for dept in departments %}
+                <option value="{{ dept.pk }}"
+                  {% if equipment_form and equipment_form.department.value|stringformat:"s" == dept.pk|stringformat:"s" %}selected{% endif %}>
+                  {{ dept.display_label }}
+                </option>
+                {% endfor %}
+              </select>
+              {% if equipment_form and equipment_form.department.errors %}
+              <div class="text-danger small">{{ equipment_form.department.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="catEqSerialNumber">Serial Number</label>
+              <input type="text" class="form-control" id="catEqSerialNumber" name="serial_number"
+                     value="{{ equipment_form.serial_number.value|default_if_none:'' }}">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Register Equipment
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

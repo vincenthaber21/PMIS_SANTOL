@@ -1,0 +1,9 @@
+Hello,
+
+A new account is being set up for you on the {{ site_name }}.
+
+Your email verification code is: {{ otp }}
+
+This code expires in {{ expires_minutes }} minutes.
+
+If you did not expect this email, you can ignore it.

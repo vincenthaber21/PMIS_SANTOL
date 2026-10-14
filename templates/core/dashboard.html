@@ -1,0 +1,672 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Welcome hero */
+  .dash-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 1.5rem;
+    background:
+      linear-gradient(135deg, #001a5e 0%, #003087 48%, #1a56db 100%);
+    color: #fff;
+    box-shadow: 0 10px 28px rgba(0, 48, 135, 0.22);
+  }
+  .dash-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 55% 80% at 100% 0%, rgba(255, 199, 44, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 40% 60% at 0% 100%, rgba(255, 255, 255, 0.07) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .dash-hero-inner {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1.25rem;
+  }
+  .dash-hero-greeting {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.65);
+    margin-bottom: 0.35rem;
+  }
+  .dash-hero h1 {
+    font-size: 1.55rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0;
+    color: #fff;
+    line-height: 1.25;
+  }
+  .dash-hero-sub {
+    margin: 0.4rem 0 0;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.78);
+    max-width: 36rem;
+  }
+  .dash-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+  }
+  .dash-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.92);
+  }
+  .dash-chip strong { color: #FFC72C; font-weight: 600; }
+  .dash-chip i { opacity: 0.9; }
+
+  .filter-panel {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+  }
+  .filter-panel .form-label {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.3rem;
+  }
+  .filter-panel .form-select,
+  .filter-panel .form-control {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: transparent;
+    min-width: 9rem;
+  }
+  .filter-panel .btn-primary {
+    background: #FFC72C;
+    border-color: #FFC72C;
+    color: #001a5e;
+    font-weight: 600;
+  }
+  .filter-panel .btn-primary:hover,
+  .filter-panel .btn-primary:focus {
+    background: #ffd65c;
+    border-color: #ffd65c;
+    color: #001a5e;
+  }
+  .filter-panel .btn-outline-secondary {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+    background: transparent;
+  }
+  .filter-panel .btn-outline-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.55);
+    color: #fff;
+  }
+
+  /* KPI upgrades */
+  .kpi-card { height: 100%; }
+  .dash-kpis > [class*="col-"] {
+    animation: dashFadeUp 0.45s ease both;
+  }
+  .dash-kpis > [class*="col-"]:nth-child(1) { animation-delay: 0.05s; }
+  .dash-kpis > [class*="col-"]:nth-child(2) { animation-delay: 0.1s; }
+  .dash-kpis > [class*="col-"]:nth-child(3) { animation-delay: 0.15s; }
+  .dash-kpis > [class*="col-"]:nth-child(4) { animation-delay: 0.2s; }
+  .kpi-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.15rem;
+  }
+  .kpi-pct {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748B;
+    white-space: nowrap;
+  }
+  .kpi-track {
+    margin-top: 0.85rem;
+    height: 5px;
+    border-radius: 999px;
+    background: #F1F5F9;
+    overflow: hidden;
+  }
+  .kpi-track > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--kpi-accent, var(--accent));
+    width: 0;
+    transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .kpi-caption {
+    font-size: 0.72rem;
+    color: #94A3B8;
+    margin-top: 0.5rem;
+  }
+
+  /* Analytics cards */
+  .dash-analytics .card {
+    animation: dashFadeUp 0.5s ease both;
+    animation-delay: 0.22s;
+  }
+  .dash-analytics .card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+  .dash-analytics .card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .chart-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--brand-surface);
+    color: var(--primary);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+  .chart-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 220px;
+    color: #94A3B8;
+    text-align: center;
+    padding: 1.5rem;
+  }
+  .chart-empty i {
+    font-size: 1.75rem;
+    opacity: 0.55;
+  }
+  .chart-empty p {
+    margin: 0;
+    font-size: 0.85rem;
+  }
+
+  @keyframes dashFadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 767.98px) {
+    .dash-hero {
+      padding: 1.25rem 1.15rem;
+      border-radius: 14px;
+    }
+    .dash-hero h1 { font-size: 1.3rem; }
+    .filter-panel {
+      width: 100%;
+    }
+    .filter-panel > div:not(.d-flex) {
+      flex: 1 1 calc(50% - 0.5rem);
+      min-width: calc(50% - 0.5rem);
+    }
+    .filter-panel > .d-flex {
+      width: 100%;
+      justify-content: flex-end;
+    }
+    .filter-panel .form-select,
+    .filter-panel .form-control {
+      min-width: 0;
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% widthratio working total_property 100 as working_pct %}
+{% widthratio disposed total_property 100 as disposed_pct %}
+{% widthratio unserviceable total_property 100 as unserviceable_pct %}
+
+<section class="dash-hero" aria-label="Dashboard welcome">
+  <div class="dash-hero-inner">
+    <div>
+      <div class="dash-hero-greeting">Overview</div>
+      <h1>Welcome back, {{ user.get_full_name|default:user.username }}</h1>
+      <p class="dash-hero-sub">
+        Property condition and registration insights for
+        {{ site_settings.site_short_name|default:"your office" }}.
+      </p>
+      <div class="dash-hero-meta">
+        <span class="dash-chip">
+          <i class="bi bi-calendar3"></i>
+          Showing <strong>{{ period_label }}</strong>
+        </span>
+        {% if not user.sees_full_dashboard %}
+        <span class="dash-chip">
+          <i class="bi bi-person-fill-lock"></i>
+          <strong>Your assigned property only</strong>
+        </span>
+        {% endif %}
+        <span class="dash-chip">
+          <i class="bi bi-building"></i>
+          {{ total_property }} total item{{ total_property|pluralize }}
+        </span>
+      </div>
+    </div>
+
+    <form method="get" id="dashboard-filter" class="filter-panel d-flex flex-wrap align-items-end gap-2">
+      <div>
+        <label for="period-select" class="form-label small mb-1">Period</label>
+        <select name="period" id="period-select" class="form-select form-select-sm">
+          <option value="all"   {% if period == 'all' %}selected{% endif %}>All time</option>
+          <option value="week"  {% if period == 'week' %}selected{% endif %}>Week</option>
+          <option value="month" {% if period == 'month' %}selected{% endif %}>Month</option>
+          <option value="year"  {% if period == 'year' %}selected{% endif %}>Year</option>
+        </select>
+      </div>
+      <div data-period-input="week" {% if period != 'week' %}hidden{% endif %}>
+        <label for="filter-week" class="form-label small mb-1">Select week</label>
+        <input type="week" id="filter-week" name="week" value="{{ period_value_week }}" class="form-control form-control-sm">
+      </div>
+      <div data-period-input="month" {% if period != 'month' %}hidden{% endif %}>
+        <label for="filter-month" class="form-label small mb-1">Select month</label>
+        <input type="month" id="filter-month" name="month" value="{{ period_value_month }}" class="form-control form-control-sm">
+      </div>
+      <div data-period-input="year" {% if period != 'year' %}hidden{% endif %}>
+        <label for="filter-year" class="form-label small mb-1">Select year</label>
+        <input type="number" id="filter-year" name="year" min="2000" max="2100" value="{{ period_value_year }}" class="form-control form-control-sm" style="width:110px;">
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+        {% if period != 'all' %}<a href="?period=all" class="btn btn-outline-secondary btn-sm">Reset</a>{% endif %}
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- Property Condition -->
+<div class="section-title"><i class="bi bi-clipboard2-check"></i> Property Condition</div>
+<div class="row g-3 mb-4 dash-kpis">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:var(--primary);">
+      <div class="kpi-top">
+        <span class="kpi-label">Total Property</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-building"></i></span>
+      </div>
+      <div class="kpi-meta">
+        <div class="kpi-value">{{ total_property }}</div>
+        <span class="kpi-pct">100%</span>
+      </div>
+      <div class="kpi-track"><span style="width:100%"></span></div>
+      <div class="kpi-caption">All registered items in scope</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#059669;">
+      <div class="kpi-top">
+        <span class="kpi-label">Working</span>
+        <span class="kpi-icon" style="background:#ECFDF5;color:#059669;"><i class="bi bi-check-circle-fill"></i></span>
+      </div>
+      <div class="kpi-meta">
+        <div class="kpi-value">{{ working }}</div>
+        <span class="kpi-pct">{{ working_pct|default:0 }}%</span>
+      </div>
+      <div class="kpi-track"><span style="width:{{ working_pct|default:0 }}%"></span></div>
+      <div class="kpi-caption">Serviceable and in use</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#DC2626;">
+      <div class="kpi-top">
+        <span class="kpi-label">Disposed</span>
+        <span class="kpi-icon" style="background:#FEF2F2;color:#DC2626;"><i class="bi bi-x-circle-fill"></i></span>
+      </div>
+      <div class="kpi-meta">
+        <div class="kpi-value">{{ disposed }}</div>
+        <span class="kpi-pct">{{ disposed_pct|default:0 }}%</span>
+      </div>
+      <div class="kpi-track"><span style="width:{{ disposed_pct|default:0 }}%"></span></div>
+      <div class="kpi-caption">Removed from active inventory</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#D97706;">
+      <div class="kpi-top">
+        <span class="kpi-label">Unserviceable</span>
+        <span class="kpi-icon" style="background:#FFFBEB;color:#D97706;"><i class="bi bi-exclamation-triangle-fill"></i></span>
+      </div>
+      <div class="kpi-meta">
+        <div class="kpi-value">{{ unserviceable }}</div>
+        <span class="kpi-pct">{{ unserviceable_pct|default:0 }}%</span>
+      </div>
+      <div class="kpi-track"><span style="width:{{ unserviceable_pct|default:0 }}%"></span></div>
+      <div class="kpi-caption">Needs repair or evaluation</div>
+    </div>
+  </div>
+</div>
+
+<!-- Analytics -->
+<div class="section-title"><i class="bi bi-bar-chart-line"></i> Analytics</div>
+<div class="dash-analytics">
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-lg-4">
+      <div class="card h-100">
+        <div class="card-header py-3">
+          <div class="card-title-row">
+            <span class="chart-icon"><i class="bi bi-pie-chart-fill"></i></span>
+            Property Status Distribution
+          </div>
+          <span class="card-subtitle">Share of items by current condition</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center">
+          {% if total_property %}
+          <div class="chart-container chart-container-doughnut">
+            <canvas id="propertyStatusChart"></canvas>
+          </div>
+          {% else %}
+          <div class="chart-empty">
+            <i class="bi bi-pie-chart"></i>
+            <p>No property data for this period.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-8">
+      <div class="card h-100">
+        <div class="card-header py-3">
+          <div class="card-title-row">
+            <span class="chart-icon"><i class="bi bi-graph-up-arrow"></i></span>
+            Property Registration Trend
+          </div>
+          <span class="card-subtitle">New items registered over time</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-container chart-container-fixed">
+            <canvas id="registrationTrendChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-12 col-md-6">
+      <div class="card h-100">
+        <div class="card-header py-3">
+          <div class="card-title-row">
+            <span class="chart-icon"><i class="bi bi-building"></i></span>
+            Properties per Office
+          </div>
+          <span class="card-subtitle">Distribution across offices</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-container chart-container-fixed">
+            <canvas id="officeChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-6">
+      <div class="card h-100">
+        <div class="card-header py-3">
+          <div class="card-title-row">
+            <span class="chart-icon"><i class="bi bi-tags-fill"></i></span>
+            Category Breakdown
+          </div>
+          <span class="card-subtitle">Items grouped by category</span>
+        </div>
+        <div class="card-body">
+          <div class="chart-container chart-container-fixed">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const propertyStatusData = {{ property_status_data|safe }};
+const trendLabels = {{ trend_labels|safe }};
+const trendValues = {{ trend_values|safe }};
+const trendDatasetLabel = "{{ trend_dataset_label|escapejs }}";
+const officeChartData = {{ office_chart|safe }};
+const categoryChartData = {{ category_chart|safe }};
+
+(function () {
+  const select = document.getElementById('period-select');
+  if (!select) return;
+  const inputs = document.querySelectorAll('[data-period-input]');
+  function sync() {
+    inputs.forEach((el) => {
+      el.hidden = el.getAttribute('data-period-input') !== select.value;
+    });
+  }
+  select.addEventListener('change', sync);
+  sync();
+})();
+
+const chartFont = { family: "'Inter', sans-serif" };
+const gridColor = 'rgba(148, 163, 184, 0.18)';
+const tickColor = '#64748B';
+
+const barChartOptions = {
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { duration: 650, easing: 'easeOutQuart' },
+  plugins: { legend: { display: false } },
+  scales: {
+    x: {
+      beginAtZero: true,
+      ticks: { stepSize: 1, maxRotation: 0, autoSkip: true, color: tickColor, font: chartFont },
+      grid: { color: gridColor, drawBorder: false },
+      border: { display: false },
+    },
+    y: {
+      grid: { display: false },
+      ticks: { autoSkip: false, color: tickColor, font: chartFont },
+      border: { display: false },
+    },
+  },
+};
+
+const doughnutChartOptions = {
+  cutout: '68%',
+  responsive: true,
+  maintainAspectRatio: false,
+  animation: { animateRotate: true, duration: 700 },
+  elements: {
+    arc: { hoverOffset: 4, borderWidth: 2, borderColor: '#fff' },
+  },
+  plugins: {
+    legend: {
+      position: 'bottom',
+      labels: {
+        font: { ...chartFont, size: 11 },
+        padding: 14,
+        usePointStyle: true,
+        pointStyle: 'circle',
+        color: tickColor,
+      },
+    },
+  },
+};
+
+const statusCanvas = document.getElementById('propertyStatusChart');
+if (statusCanvas) {
+  new Chart(statusCanvas, {
+    type: 'doughnut',
+    data: {
+      labels: propertyStatusData.labels,
+      datasets: [{
+        data: propertyStatusData.data,
+        backgroundColor: ['#059669', '#DC2626', '#D97706'],
+        borderWidth: 2,
+        borderColor: '#fff',
+        hoverBorderWidth: 2,
+      }]
+    },
+    options: {
+      ...doughnutChartOptions,
+      plugins: {
+        ...doughnutChartOptions.plugins,
+        tooltip: {
+          backgroundColor: '#0f172a',
+          padding: 10,
+          cornerRadius: 8,
+          titleFont: chartFont,
+          bodyFont: chartFont,
+          callbacks: {
+            label: (ctx) => {
+              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+              return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+            }
+          }
+        }
+      },
+    }
+  });
+}
+
+new Chart(document.getElementById('registrationTrendChart'), {
+  type: 'line',
+  data: {
+    labels: trendLabels,
+    datasets: [{
+      label: trendDatasetLabel,
+      data: trendValues,
+      borderColor: '#003087',
+      backgroundColor: (ctx) => {
+        const chart = ctx.chart;
+        const { ctx: c, chartArea } = chart;
+        if (!chartArea) return 'rgba(0, 48, 135, 0.12)';
+        const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+        g.addColorStop(0, 'rgba(0, 48, 135, 0.22)');
+        g.addColorStop(1, 'rgba(0, 48, 135, 0.02)');
+        return g;
+      },
+      tension: 0.4,
+      fill: true,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: '#003087',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      borderWidth: 2.5,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 700, easing: 'easeOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: chartFont,
+        bodyFont: chartFont,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { stepSize: 1, color: tickColor, font: chartFont },
+        grid: { color: gridColor, drawBorder: false },
+        border: { display: false },
+      },
+      x: {
+        grid: { display: false },
+        ticks: { maxRotation: 0, autoSkip: true, color: tickColor, font: chartFont },
+        border: { display: false },
+      },
+    },
+  }
+});
+
+new Chart(document.getElementById('officeChart'), {
+  type: 'bar',
+  data: {
+    labels: officeChartData.labels,
+    datasets: [{
+      label: 'Properties',
+      data: officeChartData.data,
+      backgroundColor: 'rgba(0, 48, 135, 0.8)',
+      hoverBackgroundColor: 'rgba(0, 48, 135, 0.95)',
+      borderRadius: 6,
+      borderSkipped: false,
+      maxBarThickness: 28,
+    }]
+  },
+  options: {
+    ...barChartOptions,
+    plugins: {
+      ...barChartOptions.plugins,
+      tooltip: {
+        backgroundColor: '#0f172a',
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: chartFont,
+        bodyFont: chartFont,
+      },
+    },
+  },
+});
+
+new Chart(document.getElementById('categoryChart'), {
+  type: 'bar',
+  data: {
+    labels: categoryChartData.labels,
+    datasets: [{
+      label: 'Properties',
+      data: categoryChartData.data,
+      backgroundColor: 'rgba(5, 150, 105, 0.8)',
+      hoverBackgroundColor: 'rgba(5, 150, 105, 0.95)',
+      borderRadius: 6,
+      borderSkipped: false,
+      maxBarThickness: 28,
+    }]
+  },
+  options: {
+    ...barChartOptions,
+    plugins: {
+      ...barChartOptions.plugins,
+      tooltip: {
+        backgroundColor: '#0f172a',
+        padding: 10,
+        cornerRadius: 8,
+        titleFont: chartFont,
+        bodyFont: chartFont,
+      },
+    },
+  },
+});
+</script>
+{% endblock %}

@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}Maintenance Management{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div class="d-flex align-items-center">
+    <span class="page-icon"><i class="bi bi-tools"></i></span>
+    <div>
+      <h1>Maintenance Management</h1>
+      <div class="breadcrumb">Service requests &amp; repair tracking</div>
+    </div>
+  </div>
+  <a href="{% url 'maintenance:create' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>New Request</a>
+</div>
+
+<!-- KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:var(--primary);">
+      <div class="kpi-top">
+        <span class="kpi-label">Total Requests</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-tools"></i></span>
+      </div>
+      <div class="kpi-value">{{ total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#16A34A;">
+      <div class="kpi-top">
+        <span class="kpi-label">Completed</span>
+        <span class="kpi-icon" style="background:#F0FDF4;color:#16A34A;"><i class="bi bi-check-circle-fill"></i></span>
+      </div>
+      <div class="kpi-value">{{ completed }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#D97706;">
+      <div class="kpi-top">
+        <span class="kpi-label">Pending / In Progress</span>
+        <span class="kpi-icon" style="background:#FFFBEB;color:#D97706;"><i class="bi bi-hourglass-split"></i></span>
+      </div>
+      <div class="kpi-value">{{ pending }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#E11D48;">
+      <div class="kpi-top">
+        <span class="kpi-label">Total Cost</span>
+        <span class="kpi-icon" style="background:#FFF1F2;color:#E11D48;"><i class="bi bi-currency-exchange"></i></span>
+      </div>
+      <div class="kpi-value" style="font-size:1.5rem;">₱{{ total_cost|floatformat:0 }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header d-flex align-items-center gap-3 flex-wrap">
+        <span>Maintenance Requests</span>
+        <form class="card-header-actions d-flex flex-wrap gap-2" method="get">
+          <select name="status" class="form-select form-select-sm">
+            <option value="">All Status</option>
+            {% for val, label in status_choices %}<option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+          <select name="priority" class="form-select form-select-sm">
+            <option value="">All Priority</option>
+            {% for val, label in priority_choices %}<option value="{{ val }}" {% if priority_filter == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+          <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+        </form>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>ID</th><th>Equipment</th><th>Priority</th><th>Status</th><th>Technician</th><th>Cost (₱)</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+              {% for mr in page_obj %}
+              <tr>
+                <td><a href="{% url 'maintenance:detail' mr.pk %}">MR-{{ mr.pk|stringformat:"04d" }}</a></td>
+                <td>{{ mr.equipment.name }}</td>
+                <td>{{ mr.priority|priority_badge }}</td>
+                <td>{{ mr.repair_status|status_badge }}</td>
+                <td>{{ mr.technician|default:"Unassigned" }}</td>
+                <td>{{ mr.actual_cost|peso }}</td>
+                <td>{{ mr.date_opened }}</td>
+                <td><a href="{% url 'maintenance:detail' mr.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="8" class="text-center text-muted py-4">No maintenance requests found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% if page_obj.has_other_pages %}
+      <div class="card-footer">
+        <nav><ul class="pagination justify-content-center mb-0">
+          {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">«</a></li>{% endif %}
+          <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span></li>
+          {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">»</a></li>{% endif %}
+        </ul></nav>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-bar-chart-fill me-2"></i>Cost Trend (6 months)</div>
+      <div class="card-body">
+        <canvas id="costChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+new Chart(document.getElementById('costChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ months_labels|safe }},
+    datasets: [{
+      label: 'Cost (₱)',
+      data: {{ months_cost|safe }},
+      backgroundColor: 'rgba(0, 48, 135, 0.7)',
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: '#f0f4f8' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endblock %}

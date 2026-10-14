@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}COA Forms &amp; Ledgers{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+  <div class="d-flex align-items-center">
+    <span class="page-icon"><i class="bi bi-file-earmark-ruled"></i></span>
+    <div>
+      <h1>COA Forms &amp; Ledgers</h1>
+      <div class="breadcrumb">
+        <a href="{% url 'reports:index' %}">Reports</a> / COA Forms &amp; Ledgers
+      </div>
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center page-header-actions">
+    <a href="{% url 'reports:par_register' %}" class="btn btn-outline-primary">
+      <i class="bi bi-journal-check me-1"></i>PAR Register
+    </a>
+    <a href="{% url 'reports:ics_register' %}" class="btn btn-outline-primary">
+      <i class="bi bi-journal-text me-1"></i>ICS Register
+    </a>
+  </div>
+</div>
+
+<!-- Summary KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="kpi-card" style="--kpi-accent:var(--primary);">
+      <div class="kpi-top">
+        <span class="kpi-label">Semi-Expendable Items</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-box-seam"></i></span>
+      </div>
+      <div class="kpi-value">{{ rpcsp.total }}</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="kpi-card" style="--kpi-accent:var(--accent);">
+      <div class="kpi-top">
+        <span class="kpi-label">PPE Items</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--accent);"><i class="bi bi-building"></i></span>
+      </div>
+      <div class="kpi-value">{{ ppe_count }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Equipment selector for SPC / SPLC -->
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-search me-2 text-primary"></i>Quick Print — Property Cards &amp; Ledgers (Annex A.2 / A.3)
+  </div>
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-lg-7">
+        <label class="form-label">Select Equipment</label>
+        <select name="equipment" class="form-select" onchange="this.form.submit()">
+          <option value="">— Choose equipment to filter issuance forms —</option>
+          {% for eq in equipment_list %}
+          <option value="{{ eq.pk }}" {% if equipment_id == eq.pk|stringformat:"s" %}selected{% endif %}>
+            {{ eq.property_number }} — {{ eq.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if selected_equipment %}
+      <div class="col-lg-5">
+        <label class="form-label d-none d-lg-block">&nbsp;</label>
+        <div class="d-flex flex-wrap gap-2">
+          {% if selected_equipment.classification != 'PPE' %}
+          <a href="{% url 'reports:coa_spc' selected_equipment.pk %}" class="btn btn-primary">
+            <i class="bi bi-printer me-1"></i>Print SPC
+          </a>
+          <a href="{% url 'reports:coa_splc' selected_equipment.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-printer me-1"></i>Print SPLC
+          </a>
+          {% endif %}
+          <a href="{% url 'equipment:detail' selected_equipment.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-box-arrow-up-right me-1"></i>View Item
+          </a>
+          <a href="{% url 'reports:coa_forms' %}" class="btn btn-outline-secondary" title="Clear filter">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        </div>
+      </div>
+      {% endif %}
+    </form>
+    <p class="text-muted small mt-3 mb-0">
+      <i class="bi bi-info-circle me-1"></i>
+      SPC and SPLC are generated on demand from inventory, borrowing, assignment, and maintenance records.
+    </p>
+  </div>
+</div>
+
+<!-- Issuance Forms (PAR / ICS) -->
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-file-earmark-text me-2 text-primary"></i>Issuance Forms — PAR (Appendix 71) &amp; ICS (Appendix 59)</span>
+    <span class="badge-soft badge-soft-neutral">{{ issuance_events|length }} record(s)</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Form</th>
+            <th>Control No.</th>
+            <th>Equipment</th>
+            <th>Property No.</th>
+            <th>Classification</th>
+            <th>End User</th>
+            <th>Amount</th>
+            <th class="text-end">Print</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for event in issuance_events %}
+          <tr>
+            <td>{{ event.date }}</td>
+            <td>
+              {% if event.form_type == 'PAR' %}
+              <span class="badge bg-primary">PAR</span>
+              {% else %}
+              <span class="badge bg-info">ICS</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if event.par %}
+              <code class="prop-chip">{{ event.par.par_no }}</code>
+              {% elif event.ics %}
+              <code class="prop-chip">{{ event.ics.ics_no }}</code>
+              {% elif event.form_type == 'PAR' %}
+              <span class="text-muted">—</span>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <a href="{% url 'equipment:detail' event.equipment.pk %}" class="text-decoration-none fw-500">
+                {{ event.equipment.name }}
+              </a>
+            </td>
+            <td><code class="prop-chip">{{ event.property_number }}</code></td>
+            <td>{{ event.equipment.classification|classification_badge }}</td>
+            <td>{{ event.end_user }}</td>
+            <td>{{ event.amount|peso }}</td>
+            <td class="text-end">
+              <div class="d-inline-flex gap-1">
+                {% if event.form_type == 'PAR' %}
+                <a href="{% url 'reports:coa_par' event.reference_type event.reference_id %}"
+                   class="btn btn-sm btn-outline-primary" title="Print PAR (Original + Copy 2)">
+                  <i class="bi bi-printer"></i> PAR
+                </a>
+                {% else %}
+                <a href="{% url 'reports:coa_ics' event.reference_type event.reference_id %}"
+                   class="btn btn-sm btn-outline-primary" title="Print ICS">
+                  <i class="bi bi-printer"></i> ICS
+                </a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-4">
+              No issuance events yet. Approve a borrow request or assign equipment to generate PAR/ICS forms.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

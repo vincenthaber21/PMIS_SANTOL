@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>{% block email_title %}{{ site_name }}{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f4f8;font-family:Arial,Helvetica,sans-serif;color:#334155;-webkit-text-size-adjust:100%;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f0f4f8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;">
+          <tr>
+            <td style="background-color:#003087;padding:24px 28px;border-radius:8px 8px 0 0;text-align:center;">
+              <p style="margin:0;color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.3px;">{{ site_short_name }}</p>
+              {% if site_name and site_name != site_short_name %}
+              <p style="margin:6px 0 0;color:#c8d8f0;font-size:13px;line-height:1.4;">{{ site_name }}</p>
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:32px 28px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
+              {% block email_content %}{% endblock %}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f8fafc;padding:18px 28px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 8px 8px;text-align:center;">
+              <p style="margin:0;color:#64748b;font-size:12px;line-height:1.6;">
+                Automated notification from {{ site_name }}.<br>
+                Please do not reply to this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

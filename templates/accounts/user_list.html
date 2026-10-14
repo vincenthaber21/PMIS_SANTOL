@@ -1,0 +1,936 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1><i class="bi bi-people-fill me-2"></i>User Management</h1>
+    <div class="breadcrumb">Admin / Users</div>
+  </div>
+  <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
+    <i class="bi bi-person-plus me-1"></i>Add User
+  </button>
+</div>
+
+<div id="userListAlert" class="alert alert-success alert-dismissible fade show d-none" role="alert">
+  <span id="userListAlertText"></span>
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form class="row g-2 mb-3" method="get">
+      <div class="col-md-5"><input name="search" class="form-control" placeholder="Search users..." value="{{ search }}"></div>
+      <div class="col-md-3">
+        <select name="role" class="form-select">
+          <option value="">All Roles</option>
+          {% for val, label in roles %}<option value="{{ val }}" {% if role_filter == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-auto"><button class="btn btn-primary" type="submit">Filter</button></div>
+      <div class="col-auto"><a href="{% url 'users:user_list' %}" class="btn btn-outline-secondary">Reset</a></div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-hover" id="usersTable">
+        <thead>
+          <tr>
+            <th>Username</th><th>Full Name</th><th>Role</th>
+            <th>Department</th><th>Email</th><th>Status</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in page_obj %}
+          <tr data-user-id="{{ u.pk }}">
+            <td><strong>{{ u.username }}</strong></td>
+            <td>{{ u.get_full_name|default:"—" }}</td>
+            <td><span class="badge bg-primary">{{ u.role }}</span></td>
+            <td>{{ u.department|default:"—" }}</td>
+            <td>{{ u.email }}</td>
+            <td>
+              {% if u.is_active %}<span class="badge bg-success">Active</span>
+              {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+            </td>
+            <td>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-edit-user" data-user-id="{{ u.pk }}" title="Edit user">
+                <i class="bi bi-pencil"></i>
+              </button>
+              {% if u != request.user %}
+              <form method="post" action="{% url 'users:user_delete' u.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Deactivate this user?')"><i class="bi bi-person-dash"></i></button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr id="usersEmptyRow"><td colspan="7" class="text-center text-muted py-4">No users found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if page_obj.has_other_pages %}
+    <nav><ul class="pagination justify-content-center">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}">«</a></li>{% endif %}
+      <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}">»</a></li>{% endif %}
+    </ul></nav>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h5 class="modal-title fw-600" id="createUserModalLabel">
+            <i class="bi bi-person-plus me-2"></i>Create New User
+          </h5>
+          <p class="text-muted small mb-0 mt-1" id="createUserModalSubtitle">Add a new account with role and department assignment.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <form id="createUserForm" novalidate>
+          {% csrf_token %}
+          <div id="createUserFormError" class="alert alert-danger d-none" role="alert"></div>
+
+          <fieldset id="createUserDetailsStep">
+          <h6 class="text-muted fw-600 border-bottom pb-2 mb-3">Account Details</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label" for="id_username">Username *</label>
+              {{ create_form.username }}
+              <div class="invalid-feedback" data-field="username"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_email">Email *</label>
+              {{ create_form.email }}
+              <div class="invalid-feedback" data-field="email"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_first_name">First Name</label>
+              {{ create_form.first_name }}
+              <div class="invalid-feedback" data-field="first_name"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_last_name">Last Name</label>
+              {{ create_form.last_name }}
+              <div class="invalid-feedback" data-field="last_name"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_phone">Phone</label>
+              {{ create_form.phone }}
+              <div class="invalid-feedback" data-field="phone"></div>
+            </div>
+          </div>
+
+          <h6 class="text-muted fw-600 border-bottom pb-2 mb-3">Role &amp; Department</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label" for="id_role">Role *</label>
+              <div class="input-group">
+                {{ create_form.role }}
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal" title="Add role">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" data-field="role"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_department">Department</label>
+              {{ create_form.department }}
+              <div class="invalid-feedback" data-field="department"></div>
+            </div>
+          </div>
+
+          <h6 class="text-muted fw-600 border-bottom pb-2 mb-3">Security</h6>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="id_password1">Password *</label>
+              <div class="input-group password-toggle-group">
+                {{ create_form.password1 }}
+                <button type="button" class="btn btn-outline-secondary password-toggle-btn" title="Show password" aria-label="Show password">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" data-field="password1"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="id_password2">Confirm Password *</label>
+              <div class="input-group password-toggle-group">
+                {{ create_form.password2 }}
+                <button type="button" class="btn btn-outline-secondary password-toggle-btn" title="Show password" aria-label="Show password">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" data-field="password2"></div>
+            </div>
+          </div>
+          </fieldset>
+
+          <div id="createOtpStep" class="d-none">
+            <h6 class="text-muted fw-600 border-bottom pb-2 mb-3">Email Verification</h6>
+            <div class="alert alert-info mb-3">
+              <i class="bi bi-shield-check me-1"></i>
+              A 6-digit code was sent to <strong id="otpMaskedEmail"></strong>.
+              Enter it below to confirm the email before creating the account.
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="createOtpInput">Verification Code *</label>
+                <input type="text" class="form-control text-center fw-bold" id="createOtpInput" name="otp"
+                       maxlength="6" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code"
+                       placeholder="000000" style="letter-spacing: 4px;">
+                <div class="invalid-feedback" data-field="otp"></div>
+                <div class="form-text">Code expires in 10 minutes.</div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-outline-secondary d-none" id="createBackBtn">Back</button>
+        <button type="button" class="btn btn-outline-primary d-none" id="resendOtpBtn">
+          <span class="btn-label"><i class="bi bi-arrow-repeat me-1"></i>Resend Code</span>
+          <span class="btn-spinner d-none"><span class="spinner-border spinner-border-sm me-1" role="status"></span>Sending…</span>
+        </button>
+        <button type="button" class="btn btn-primary" id="sendOtpBtn">
+          <span class="btn-label"><i class="bi bi-envelope-check me-1"></i>Send Verification Code</span>
+          <span class="btn-spinner d-none"><span class="spinner-border spinner-border-sm me-1" role="status"></span>Sending…</span>
+        </button>
+        <button type="button" class="btn btn-primary d-none" id="verifyUserBtn">
+          <span class="btn-label"><i class="bi bi-person-check me-1"></i>Verify &amp; Create User</span>
+          <span class="btn-spinner d-none"><span class="spinner-border spinner-border-sm me-1" role="status"></span>Creating…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h5 class="modal-title fw-600" id="editUserModalLabel">
+            <i class="bi bi-person-gear me-2"></i>Edit User
+          </h5>
+          <p class="text-muted small mb-0 mt-1" id="editUserSubtitle">Update account details, role, and status.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div id="editUserLoading" class="text-center py-5 d-none">
+          <div class="spinner-border text-primary" role="status"></div>
+          <p class="text-muted small mt-2 mb-0">Loading user…</p>
+        </div>
+        <form id="editUserForm" novalidate class="d-none">
+          {% csrf_token %}
+          <div id="editUserFormError" class="alert alert-danger d-none" role="alert"></div>
+
+          <h6 class="text-muted fw-600 border-bottom pb-2 mb-3">Account Details</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label" for="edit_username">Username *</label>
+              <input type="text" class="form-control" id="edit_username" name="username" required>
+              <div class="invalid-feedback" data-field="username"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_email">Email *</label>
+              <input type="email" class="form-control" id="edit_email" name="email" required>
+              <div class="invalid-feedback" data-field="email"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_first_name">First Name</label>
+              <input type="text" class="form-control" id="edit_first_name" name="first_name">
+              <div class="invalid-feedback" data-field="first_name"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_last_name">Last Name</label>
+              <input type="text" class="form-control" id="edit_last_name" name="last_name">
+              <div class="invalid-feedback" data-field="last_name"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_phone">Phone</label>
+              <input type="text" class="form-control" id="edit_phone" name="phone">
+              <div class="invalid-feedback" data-field="phone"></div>
+            </div>
+          </div>
+
+          <h6 class="text-muted fw-600 border-bottom pb-2 mb-3">Role &amp; Department</h6>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label" for="edit_role">Role *</label>
+              <div class="input-group">
+                <select class="form-control form-select" id="edit_role" name="role">
+                  {% for val, label in roles %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+                </select>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addRoleModal" title="Add role">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
+              <div class="invalid-feedback" data-field="role"></div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="edit_department">Department</label>
+              <select class="form-control form-select" id="edit_department" name="department">
+                {% for val, label in edit_form.fields.department.choices %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+              <div class="invalid-feedback" data-field="department"></div>
+            </div>
+          </div>
+
+          <h6 class="text-muted fw-600 border-bottom pb-2 mb-3">Status</h6>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active">
+            <label class="form-check-label" for="edit_is_active">Active account</label>
+            <div class="invalid-feedback d-block" data-field="is_active"></div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="updateUserBtn" disabled>
+          <span class="btn-label"><i class="bi bi-save me-1"></i>Save Changes</span>
+          <span class="btn-spinner d-none"><span class="spinner-border spinner-border-sm me-1" role="status"></span>Saving…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="addRoleModal" tabindex="-1" aria-labelledby="addRoleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addRoleModalLabel">
+          <i class="bi bi-shield-plus me-2"></i>Add Role
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="newRoleName">Role name *</label>
+          <input type="text" class="form-control" id="newRoleName" placeholder="e.g. Supervisor" maxlength="50">
+          <div class="invalid-feedback" data-field="name"></div>
+        </div>
+        <div>
+          <label class="form-label" for="newRoleStatus">Status</label>
+          <select class="form-select" id="newRoleStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+          <div class="invalid-feedback" data-field="status"></div>
+        </div>
+        <div id="roleFormError" class="alert alert-danger d-none mt-3 mb-0" role="alert"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveRoleBtn">
+          <span class="btn-label"><i class="bi bi-plus-circle me-1"></i>Add Role</span>
+          <span class="btn-spinner d-none"><span class="spinner-border spinner-border-sm me-1" role="status"></span>Saving…</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const createForm = document.getElementById('createUserForm');
+  const sendOtpBtn = document.getElementById('sendOtpBtn');
+  const verifyUserBtn = document.getElementById('verifyUserBtn');
+  const resendOtpBtn = document.getElementById('resendOtpBtn');
+  const createBackBtn = document.getElementById('createBackBtn');
+  const createDetailsStep = document.getElementById('createUserDetailsStep');
+  const createOtpStep = document.getElementById('createOtpStep');
+  const createOtpInput = document.getElementById('createOtpInput');
+  const otpMaskedEmailEl = document.getElementById('otpMaskedEmail');
+  const createModalSubtitle = document.getElementById('createUserModalSubtitle');
+  const createModalEl = document.getElementById('createUserModal');
+  const createErrorEl = document.getElementById('createUserFormError');
+
+  const editForm = document.getElementById('editUserForm');
+  const editBtn = document.getElementById('updateUserBtn');
+  const editModalEl = document.getElementById('editUserModal');
+  const editErrorEl = document.getElementById('editUserFormError');
+  const editLoadingEl = document.getElementById('editUserLoading');
+  const editSubtitleEl = document.getElementById('editUserSubtitle');
+
+  const alertEl = document.getElementById('userListAlert');
+  const alertTextEl = document.getElementById('userListAlertText');
+  const tableBody = document.querySelector('#usersTable tbody');
+  const currentUserId = {{ request.user.pk }};
+  const userEditUrl = function (pk) {
+    return '{% url "users:user_edit" 999999 %}'.replace('999999', String(pk));
+  };
+  let editingUserId = null;
+  let editModalInstance = null;
+  let verificationToken = null;
+
+  function initPasswordToggles(root) {
+    root.querySelectorAll('.password-toggle-group').forEach(function (group) {
+      const input = group.querySelector('input');
+      const btn = group.querySelector('.password-toggle-btn');
+      if (!input || !btn || btn.dataset.bound === '1') {
+        return;
+      }
+      btn.dataset.bound = '1';
+      const icon = btn.querySelector('i');
+      btn.addEventListener('click', function () {
+        const show = input.type === 'password';
+        input.type = show ? 'text' : 'password';
+        icon.classList.toggle('bi-eye', !show);
+        icon.classList.toggle('bi-eye-slash', show);
+        const label = show ? 'Hide password' : 'Show password';
+        btn.title = label;
+        btn.setAttribute('aria-label', label);
+      });
+    });
+  }
+
+  function resetPasswordToggles(root) {
+    root.querySelectorAll('.password-toggle-group input').forEach(function (input) {
+      input.type = 'password';
+    });
+    root.querySelectorAll('.password-toggle-group .password-toggle-btn').forEach(function (btn) {
+      const icon = btn.querySelector('i');
+      if (icon) {
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+      }
+      btn.title = 'Show password';
+      btn.setAttribute('aria-label', 'Show password');
+    });
+  }
+
+  function setCreateStep(step) {
+    const isOtpStep = step === 2;
+    createDetailsStep.disabled = isOtpStep;
+    createOtpStep.classList.toggle('d-none', !isOtpStep);
+    sendOtpBtn.classList.toggle('d-none', isOtpStep);
+    verifyUserBtn.classList.toggle('d-none', !isOtpStep);
+    createBackBtn.classList.toggle('d-none', !isOtpStep);
+    resendOtpBtn.classList.toggle('d-none', !isOtpStep);
+    createModalSubtitle.textContent = isOtpStep
+      ? 'Confirm the user\'s email with the verification code.'
+      : 'Add a new account with role and department assignment.';
+    if (!isOtpStep) {
+      verificationToken = null;
+      createOtpInput.value = '';
+    }
+  }
+
+  function resetCreateModal() {
+    createForm.reset();
+    resetPasswordToggles(createModalEl);
+    clearFormErrors(createForm, createErrorEl);
+    createErrorEl.classList.remove('alert-success');
+    createErrorEl.classList.add('alert-danger');
+    setButtonLoading(sendOtpBtn, false);
+    setButtonLoading(verifyUserBtn, false);
+    setButtonLoading(resendOtpBtn, false);
+    setCreateStep(1);
+  }
+
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : '';
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function showSuccess(message) {
+    alertTextEl.textContent = message;
+    alertEl.classList.remove('d-none');
+    alertEl.classList.add('show');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function clearFormErrors(form, errorEl) {
+    errorEl.classList.add('d-none');
+    errorEl.textContent = '';
+    form.querySelectorAll('.is-invalid').forEach(function (el) {
+      el.classList.remove('is-invalid');
+    });
+    form.querySelectorAll('.invalid-feedback').forEach(function (el) {
+      el.textContent = '';
+    });
+  }
+
+  function showFormErrors(form, errorEl, errors) {
+    clearFormErrors(form, errorEl);
+    const messages = [];
+    Object.keys(errors).forEach(function (field) {
+      const input = form.querySelector('[name="' + field + '"]');
+      const feedback = form.querySelector('.invalid-feedback[data-field="' + field + '"]');
+      const text = errors[field].join(' ');
+      if (input) {
+        input.classList.add('is-invalid');
+      }
+      if (feedback) {
+        feedback.textContent = text;
+      }
+      messages.push(text);
+    });
+    if (messages.length) {
+      errorEl.textContent = messages[0];
+      errorEl.classList.remove('d-none');
+    }
+  }
+
+  function setButtonLoading(btn, loading, idleLabel, loadingLabel) {
+    btn.disabled = loading;
+    btn.querySelector('.btn-label').classList.toggle('d-none', loading);
+    btn.querySelector('.btn-spinner').classList.toggle('d-none', !loading);
+  }
+
+  function buildActionButtons(user) {
+    let actions =
+      '<button type="button" class="btn btn-sm btn-outline-primary btn-edit-user" data-user-id="' + user.pk + '" title="Edit user">' +
+      '<i class="bi bi-pencil"></i></button>';
+    if (user.pk !== currentUserId) {
+      actions +=
+        ' <form method="post" action="' + escapeHtml(user.delete_url) + '" class="d-inline">' +
+        '<input type="hidden" name="csrfmiddlewaretoken" value="' + getCookie('csrftoken') + '">' +
+        '<button class="btn btn-sm btn-outline-danger" onclick="return confirm(\'Deactivate this user?\')"><i class="bi bi-person-dash"></i></button>' +
+        '</form>';
+    }
+    return actions;
+  }
+
+  function statusBadge(isActive) {
+    return isActive
+      ? '<span class="badge bg-success">Active</span>'
+      : '<span class="badge bg-secondary">Inactive</span>';
+  }
+
+  function buildRowHtml(user) {
+    return (
+      '<td><strong>' + escapeHtml(user.username) + '</strong></td>' +
+      '<td>' + escapeHtml(user.full_name) + '</td>' +
+      '<td><span class="badge bg-primary">' + escapeHtml(user.role_name || user.role) + '</span></td>' +
+      '<td>' + escapeHtml(user.department_name) + '</td>' +
+      '<td>' + escapeHtml(user.email) + '</td>' +
+      '<td>' + statusBadge(user.is_active) + '</td>' +
+      '<td>' + buildActionButtons(user) + '</td>'
+    );
+  }
+
+  function prependUserRow(user) {
+    const emptyRow = document.getElementById('usersEmptyRow');
+    if (emptyRow) {
+      emptyRow.remove();
+    }
+
+    const row = document.createElement('tr');
+    row.dataset.userId = user.pk;
+    row.innerHTML = buildRowHtml(user);
+    tableBody.insertBefore(row, tableBody.firstChild);
+  }
+
+  function updateUserRow(user) {
+    const row = tableBody.querySelector('tr[data-user-id="' + user.pk + '"]');
+    if (!row) {
+      return;
+    }
+    row.innerHTML = buildRowHtml(user);
+  }
+
+  async function fetchJson(url, options) {
+    const response = await fetch(url, options);
+    const data = await response.json();
+    return { response: response, data: data };
+  }
+
+  function populateEditForm(user) {
+    editForm.querySelector('#edit_username').value = user.username || '';
+    editForm.querySelector('#edit_email').value = user.email || '';
+    editForm.querySelector('#edit_first_name').value = user.first_name || '';
+    editForm.querySelector('#edit_last_name').value = user.last_name || '';
+    editForm.querySelector('#edit_phone').value = user.phone || '';
+    editForm.querySelector('#edit_role').value = user.role || '';
+    editForm.querySelector('#edit_department').value = user.department || '';
+    editForm.querySelector('#edit_is_active').checked = !!user.is_active;
+    editSubtitleEl.textContent = 'Editing ' + user.username;
+  }
+
+  function showEditForm(show) {
+    editLoadingEl.classList.toggle('d-none', show);
+    editForm.classList.toggle('d-none', !show);
+    editBtn.disabled = !show;
+  }
+
+  async function openEditModal(userId) {
+    editingUserId = userId;
+    clearFormErrors(editForm, editErrorEl);
+    showEditForm(false);
+    editModalInstance = bootstrap.Modal.getOrCreateInstance(editModalEl);
+    editModalInstance.show();
+
+    try {
+      const { response, data } = await fetchJson(userEditUrl(userId), {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Could not load user.');
+      }
+      populateEditForm(data.user);
+      showEditForm(true);
+    } catch (err) {
+      editErrorEl.textContent = err.message || 'Could not load user.';
+      editErrorEl.classList.remove('d-none');
+      editLoadingEl.classList.add('d-none');
+      editBtn.disabled = true;
+    }
+  }
+
+  tableBody.addEventListener('click', function (event) {
+    const btn = event.target.closest('.btn-edit-user');
+    if (!btn) {
+      return;
+    }
+    openEditModal(btn.dataset.userId);
+  });
+
+  createBackBtn.addEventListener('click', function () {
+    clearFormErrors(createForm, createErrorEl);
+    setCreateStep(1);
+  });
+
+  sendOtpBtn.addEventListener('click', async function () {
+    clearFormErrors(createForm, createErrorEl);
+    setButtonLoading(sendOtpBtn, true);
+
+    try {
+      const { response, data } = await fetchJson('{% url "users:user_create_send_otp" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: new URLSearchParams(new FormData(createForm)),
+      });
+
+      if (!response.ok || !data.success) {
+        if (data.errors) {
+          showFormErrors(createForm, createErrorEl, data.errors);
+        } else {
+          createErrorEl.textContent = data.error || 'Could not send verification code.';
+          createErrorEl.classList.remove('d-none');
+        }
+        return;
+      }
+
+      verificationToken = data.verification_token;
+      otpMaskedEmailEl.textContent = data.masked_email;
+      setCreateStep(2);
+      createOtpInput.focus();
+    } catch (err) {
+      createErrorEl.textContent = 'Network error. Please try again.';
+      createErrorEl.classList.remove('d-none');
+    } finally {
+      setButtonLoading(sendOtpBtn, false);
+    }
+  });
+
+  resendOtpBtn.addEventListener('click', async function () {
+    if (!verificationToken) {
+      return;
+    }
+
+    clearFormErrors(createForm, createErrorEl);
+    setButtonLoading(resendOtpBtn, true);
+
+    try {
+      const body = new URLSearchParams({
+        verification_token: verificationToken,
+        csrfmiddlewaretoken: getCookie('csrftoken'),
+      });
+      const { response, data } = await fetchJson('{% url "users:user_create_resend_otp" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: body,
+      });
+
+      if (!response.ok || !data.success) {
+        createErrorEl.textContent = data.error || 'Could not resend verification code.';
+        createErrorEl.classList.remove('d-none');
+        if (data.error && data.error.indexOf('expired') !== -1) {
+          setCreateStep(1);
+        }
+        return;
+      }
+
+      otpMaskedEmailEl.textContent = data.masked_email;
+      createOtpInput.value = '';
+      createOtpInput.focus();
+      createErrorEl.classList.remove('d-none', 'alert-danger');
+      createErrorEl.classList.add('alert-success');
+      createErrorEl.textContent = 'A new verification code was sent.';
+    } catch (err) {
+      createErrorEl.textContent = 'Network error. Please try again.';
+      createErrorEl.classList.remove('d-none');
+    } finally {
+      setButtonLoading(resendOtpBtn, false);
+    }
+  });
+
+  verifyUserBtn.addEventListener('click', async function () {
+    if (!verificationToken) {
+      return;
+    }
+
+    clearFormErrors(createForm, createErrorEl);
+    setButtonLoading(verifyUserBtn, true);
+
+    const body = new URLSearchParams({
+      verification_token: verificationToken,
+      otp: createOtpInput.value.trim(),
+      csrfmiddlewaretoken: getCookie('csrftoken'),
+    });
+
+    try {
+      const { response, data } = await fetchJson('{% url "users:user_create_verify" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: body,
+      });
+
+      if (!response.ok || !data.success) {
+        if (data.errors) {
+          showFormErrors(createForm, createErrorEl, data.errors);
+        } else {
+          createErrorEl.textContent = data.error || 'Could not create user.';
+          createErrorEl.classList.remove('d-none');
+        }
+        if (data.error && data.error.indexOf('start again') !== -1) {
+          setCreateStep(1);
+        }
+        return;
+      }
+
+      bootstrap.Modal.getInstance(createModalEl).hide();
+      resetCreateModal();
+      prependUserRow(data.user);
+      if (data.email_warning) {
+        showSuccess(data.email_warning);
+      } else {
+        showSuccess('User ' + data.user.username + ' created successfully. Email verified and welcome email sent.');
+      }
+    } catch (err) {
+      createErrorEl.textContent = 'Network error. Please try again.';
+      createErrorEl.classList.remove('d-none');
+    } finally {
+      setButtonLoading(verifyUserBtn, false);
+    }
+  });
+
+  editBtn.addEventListener('click', async function () {
+    if (!editingUserId) {
+      return;
+    }
+
+    clearFormErrors(editForm, editErrorEl);
+    setButtonLoading(editBtn, true);
+
+    const body = new URLSearchParams(new FormData(editForm));
+    if (!editForm.querySelector('#edit_is_active').checked) {
+      body.delete('is_active');
+    }
+
+    try {
+      const { response, data } = await fetchJson(userEditUrl(editingUserId), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: body,
+      });
+
+      if (!response.ok || !data.success) {
+        if (data.errors) {
+          showFormErrors(editForm, editErrorEl, data.errors);
+        } else {
+          editErrorEl.textContent = data.error || 'Could not update user.';
+          editErrorEl.classList.remove('d-none');
+        }
+        return;
+      }
+
+      bootstrap.Modal.getInstance(editModalEl).hide();
+      updateUserRow(data.user);
+      showSuccess('User ' + data.user.username + ' updated successfully.');
+    } catch (err) {
+      editErrorEl.textContent = 'Network error. Please try again.';
+      editErrorEl.classList.remove('d-none');
+    } finally {
+      setButtonLoading(editBtn, false);
+    }
+  });
+
+  createModalEl.addEventListener('hidden.bs.modal', resetCreateModal);
+  initPasswordToggles(createModalEl);
+
+  editModalEl.addEventListener('hidden.bs.modal', function () {
+    editForm.reset();
+    clearFormErrors(editForm, editErrorEl);
+    setButtonLoading(editBtn, false);
+    editingUserId = null;
+    showEditForm(false);
+    editSubtitleEl.textContent = 'Update account details, role, and status.';
+  });
+
+  const editParam = new URLSearchParams(window.location.search).get('edit');
+  if (editParam) {
+    openEditModal(editParam);
+    const cleanUrl = window.location.pathname + window.location.search
+      .replace(/([?&])edit=[^&]+&?/, '$1')
+      .replace(/[?&]$/, '');
+    window.history.replaceState({}, '', cleanUrl || window.location.pathname);
+  }
+
+  const roleFormSelects = [
+    document.getElementById('id_role'),
+    document.getElementById('edit_role'),
+  ].filter(Boolean);
+  const roleFilterSelect = document.querySelector('form[method="get"] select[name="role"]');
+  const newRoleNameInput = document.getElementById('newRoleName');
+  const newRoleStatusInput = document.getElementById('newRoleStatus');
+  const roleFormErrorEl = document.getElementById('roleFormError');
+  const saveRoleBtn = document.getElementById('saveRoleBtn');
+  const addRoleModalEl = document.getElementById('addRoleModal');
+
+  function clearRoleModalErrors() {
+    roleFormErrorEl.classList.add('d-none');
+    roleFormErrorEl.textContent = '';
+    newRoleNameInput.classList.remove('is-invalid');
+    addRoleModalEl.querySelectorAll('.invalid-feedback').forEach(function (el) {
+      el.textContent = '';
+    });
+  }
+
+  function clearRoleModal() {
+    newRoleNameInput.value = '';
+    newRoleStatusInput.value = 'Active';
+    clearRoleModalErrors();
+  }
+
+  function appendRoleOption(selectEl, role) {
+    const option = document.createElement('option');
+    option.value = role.id;
+    option.textContent = role.name;
+    selectEl.appendChild(option);
+    selectEl.value = role.id;
+    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  if (saveRoleBtn) {
+    saveRoleBtn.addEventListener('click', async function () {
+      clearRoleModalErrors();
+      const name = newRoleNameInput.value.trim();
+      const status = newRoleStatusInput.value;
+      if (!name) {
+        newRoleNameInput.classList.add('is-invalid');
+        const feedback = addRoleModalEl.querySelector('.invalid-feedback[data-field="name"]');
+        if (feedback) {
+          feedback.textContent = 'Enter a role name.';
+        }
+        return;
+      }
+
+      setButtonLoading(saveRoleBtn, true);
+      try {
+        const body = new URLSearchParams({
+          name: name,
+          status: status,
+          csrfmiddlewaretoken: getCookie('csrftoken'),
+        });
+        const { response, data } = await fetchJson('{% url "role_create" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: body,
+        });
+
+        if (!response.ok || !data.success) {
+          if (data.errors) {
+            Object.keys(data.errors).forEach(function (field) {
+              const input = field === 'name' ? newRoleNameInput : newRoleStatusInput;
+              const feedback = addRoleModalEl.querySelector('.invalid-feedback[data-field="' + field + '"]');
+              const text = data.errors[field].join(' ');
+              if (input) {
+                input.classList.add('is-invalid');
+              }
+              if (feedback) {
+                feedback.textContent = text;
+              }
+            });
+            roleFormErrorEl.textContent = Object.values(data.errors).flat().join(' ');
+          } else {
+            roleFormErrorEl.textContent = data.error || 'Could not create role.';
+          }
+          roleFormErrorEl.classList.remove('d-none');
+          return;
+        }
+
+        function addRoleToSelect(selectEl) {
+          if (selectEl.querySelector('option[value="' + data.id + '"]')) {
+            selectEl.value = data.id;
+            return;
+          }
+          appendRoleOption(selectEl, data);
+        }
+
+        if (status === 'Active') {
+          roleFormSelects.forEach(addRoleToSelect);
+        }
+        if (roleFilterSelect) {
+          addRoleToSelect(roleFilterSelect);
+        }
+
+        bootstrap.Modal.getInstance(addRoleModalEl).hide();
+        clearRoleModal();
+        showSuccess('Role "' + data.name + '" created successfully.');
+      } catch (err) {
+        roleFormErrorEl.textContent = 'Network error. Please try again.';
+        roleFormErrorEl.classList.remove('d-none');
+      } finally {
+        setButtonLoading(saveRoleBtn, false);
+      }
+    });
+
+    addRoleModalEl.addEventListener('hidden.bs.modal', clearRoleModal);
+  }
+})();
+</script>
+{% endblock %}

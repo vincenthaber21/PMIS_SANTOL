@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}Borrowing & Assignment{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div class="d-flex align-items-center">
+    <span class="page-icon"><i class="bi bi-box-arrow-in-right"></i></span>
+    <div>
+      <h1>Borrowing &amp; Assignment</h1>
+      <div class="breadcrumb">Requests, approvals &amp; returns</div>
+    </div>
+  </div>
+  <a href="{% url 'borrowing:create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle me-1"></i>New Request
+  </a>
+</div>
+
+<!-- Analytics KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:var(--primary);">
+      <div class="kpi-top">
+        <span class="kpi-label">Total Requests</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-box-arrow-in-right"></i></span>
+      </div>
+      <div class="kpi-value">{{ total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#E11D48;">
+      <div class="kpi-top">
+        <span class="kpi-label">Overdue</span>
+        <span class="kpi-icon" style="background:#FFF1F2;color:#E11D48;"><i class="bi bi-exclamation-circle-fill"></i></span>
+      </div>
+      <div class="kpi-value">{{ overdue_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:#16A34A;">
+      <div class="kpi-top">
+        <span class="kpi-label">Avg Return Time</span>
+        <span class="kpi-icon" style="background:#F0FDF4;color:#16A34A;"><i class="bi bi-clock"></i></span>
+      </div>
+      <div class="kpi-value">{{ avg_return_days }}d</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="kpi-card" style="--kpi-accent:var(--accent);">
+      <div class="kpi-top">
+        <span class="kpi-label">Borrow Rate</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--accent);"><i class="bi bi-percent"></i></span>
+      </div>
+      <div class="kpi-value">{{ borrow_rate }}%</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center gap-3 flex-wrap">
+        <span>Borrow Requests</span>
+        <form class="card-header-actions d-flex flex-wrap gap-2" method="get">
+          <select name="status" class="form-select form-select-sm">
+            <option value="">All Status</option>
+            {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+          <a href="{% url 'borrowing:list' %}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        </form>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead><tr><th>ID</th><th>Equipment</th><th>Employee</th><th>Borrow Date</th><th>Expected Return</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+              {% for br in page_obj %}
+              <tr {% if br.is_overdue %}class="table-warning"{% endif %}>
+                <td><a href="{% url 'borrowing:detail' br.pk %}">BR-{{ br.pk|stringformat:"04d" }}</a></td>
+                <td>{{ br.equipment.name }}</td>
+                <td>{{ br.employee.get_full_name|default:br.employee.username }}</td>
+                <td>{{ br.borrow_date }}</td>
+                <td>{{ br.expected_return }}
+                  {% if br.is_overdue %}<span class="badge bg-danger ms-1">OVERDUE</span>{% endif %}
+                </td>
+                <td>{{ br.approval_status|status_badge }}</td>
+                <td>
+                  <a href="{% url 'borrowing:detail' br.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                  {% if br.approval_status == 'Approved' and not br.actual_return %}
+                  <form method="post" action="{% url 'borrowing:return' br.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-success" onclick="return confirm('Mark as returned?')"><i class="bi bi-box-arrow-in-left"></i></button>
+                  </form>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="7" class="text-center text-muted py-4">No borrow requests found.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% if page_obj.has_other_pages %}
+      <div class="card-footer">
+        <nav><ul class="pagination justify-content-center mb-0">
+          {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">«</a></li>{% endif %}
+          <li class="page-item disabled"><span class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span></li>
+          {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">»</a></li>{% endif %}
+        </ul></nav>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-4">
+    <div class="card">
+      <div class="card-header">Top Borrowed Equipment</div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for eq in top_borrowed %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-500 small">{{ eq.name }}</div>
+              <div class="text-muted" style="font-size:0.72rem;">{{ eq.property_number }}</div>
+            </div>
+            <span class="badge bg-primary rounded-pill">{{ eq.borrow_count }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted text-center">No data.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

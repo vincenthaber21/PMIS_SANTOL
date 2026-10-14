@@ -1,0 +1,982 @@
+{% extends 'base.html' %}
+{% load static pms_tags %}
+
+{% block title %}Equipment Inventory{% endblock %}
+
+{% block content %}
+<div class="eq-page">
+  <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-start">
+      <span class="page-icon"><i class="bi bi-pc-display"></i></span>
+      <div>
+        <h1>Equipment Inventory</h1>
+        <div class="breadcrumb">
+          {{ total_count }} record{{ total_count|pluralize }}
+          {% if employee_own_view %} · assigned to you{% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="page-header-actions d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#qrScanModal">
+        <i class="bi bi-qr-code-scan me-1"></i>Scan QR
+      </button>
+      {% if request.user.is_admin or request.user.is_custodian %}
+      <a href="{% url 'equipment:create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Register Equipment
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="eq-tools mb-3">
+    <span class="eq-tools-label">Exports</span>
+    <div class="eq-tools-actions">
+      {% if can_print_assigned_par %}
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="print-assigned-par-btn"
+              title="Select an assigned user in the filters, then download their PAR and ICS">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PAR &amp; ICS
+      </button>
+      <a id="print-assigned-par-link" class="visually-hidden" href="#" tabindex="-1" aria-hidden="true">Download PAR &amp; ICS</a>
+      {% elif assigned_par_count %}
+      <a href="{% url 'reports:par_print_assigned' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PAR &amp; ICS
+      </a>
+      {% endif %}
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="equipment-export-excel-btn"
+              title="Download filtered equipment as PAR (Appendix 71) Excel">
+        <i class="bi bi-file-earmark-excel me-1"></i>PAR Excel
+      </button>
+      {% if can_print_qr_codes %}
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#qrExportModal"
+              title="Print or download QR codes for filtered equipment">
+        <i class="bi bi-qr-code me-1"></i>QR Codes
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card mb-3 equipment-filter-card">
+    <div class="card-body">
+      <form class="equipment-filter-form" method="get" id="equipment-filter-form">
+        {% if selected_batch %}
+        <input type="hidden" name="batch" value="{{ selected_batch }}">
+        {% endif %}
+        <div class="eq-filter-grid">
+          <div class="filter-field filter-field-search">
+            <label class="eq-filter-label" for="id_search">Search</label>
+            {{ filter_form.search }}
+          </div>
+          <div class="filter-field filter-field-select">
+            <label class="eq-filter-label" for="id_classification">Equipment Type</label>
+            {{ filter_form.classification }}
+          </div>
+          <div class="filter-field filter-field-select">
+            <label class="eq-filter-label" for="id_category">Category</label>
+            {{ filter_form.category }}
+          </div>
+          <div class="filter-field filter-field-select">
+            <label class="eq-filter-label" for="id_property_status">Property Status</label>
+            {{ filter_form.property_status }}
+          </div>
+          {% if request.user.sees_full_equipment_list %}
+          <div class="filter-field filter-field-assigned">
+            <label class="eq-filter-label" for="id_assigned_user">Assigned User</label>
+            {{ filter_form.assigned_user }}
+            <div id="assigned-user-filter-error" class="invalid-feedback" role="alert"></div>
+          </div>
+          {% endif %}
+          <div class="filter-field filter-field-actions">
+            <span class="eq-filter-label d-none d-md-block">&nbsp;</span>
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-funnel me-1"></i>Apply
+              </button>
+              <a href="{% url 'equipment:list' %}" class="btn btn-outline-secondary">Clear</a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {% if selected_batch %}
+  <div class="alert eq-batch-banner d-flex align-items-start justify-content-between flex-wrap gap-2 mb-3" role="status">
+    <div>
+      <div class="fw-semibold">
+        <i class="bi bi-collection me-1"></i>Registration group
+      </div>
+      <div class="small mb-0">
+        Showing {{ selected_batch_count }} unit{{ selected_batch_count|pluralize }} registered together.
+        Edit each row below, or open any item for full details.
+      </div>
+    </div>
+    <a href="{% url 'equipment:list' %}{% if clear_batch_query %}?{{ clear_batch_query }}{% endif %}"
+       class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x-lg me-1"></i>Clear group filter
+    </a>
+  </div>
+  {% endif %}
+
+  <div class="card eq-results-card">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <span>Inventory list</span>
+        <span class="card-subtitle">Click a name or view icon to open the full record</span>
+      </div>
+      <span class="eq-count-chip">{{ total_count }} shown</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 eq-table">
+          <thead>
+            <tr>
+              <th>Property No.</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Form</th>
+              <th>Fund Source</th>
+              <th>Location</th>
+              <th>Unit Value</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for eq in page_obj %}
+            {% if eq.registration_batch and eq.batch_size > 1 %}
+            {% ifchanged eq.registration_batch %}
+            <tr class="eq-batch-header">
+              <td colspan="9">
+                <div class="eq-batch-header__inner">
+                  <span class="eq-batch-header__label">
+                    <i class="bi bi-collection"></i>
+                    Registered together · {{ eq.batch_size }} unit{{ eq.batch_size|pluralize }}
+                    {% if eq.batch_registered_at %}
+                    <span class="eq-batch-header__time">{{ eq.batch_registered_at|date:"M j, Y g:i A" }}</span>
+                    {% endif %}
+                  </span>
+                  <span class="eq-batch-header__actions">
+                    {% if selected_batch %}
+                    <span class="eq-batch-chip is-active">Viewing this group</span>
+                    {% else %}
+                    <a class="eq-batch-chip"
+                       href="?{% for key, value in request.GET.items %}{% if key != 'page' and key != 'batch' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}batch={{ eq.registration_batch }}"
+                       title="Show only equipment from this registration">
+                      View group
+                    </a>
+                    {% endif %}
+                    {% if request.user.is_admin or request.user.is_custodian %}
+                    <a class="eq-batch-chip eq-batch-chip--edit"
+                       href="{% url 'equipment:edit' eq.pk %}"
+                       title="Edit first unit in this group">
+                      <i class="bi bi-pencil"></i> Edit
+                    </a>
+                    {% endif %}
+                  </span>
+                </div>
+              </td>
+            </tr>
+            {% endifchanged %}
+            {% endif %}
+            <tr class="{% if eq.registration_batch and eq.batch_size > 1 %}eq-batch-row{% endif %}">
+              <td>
+                <code class="prop-chip">{{ eq.property_number }}</code>
+                {% if eq.registration_batch and eq.batch_size > 1 and not selected_batch %}
+                <div class="mt-1">
+                  <a class="eq-batch-mini"
+                     href="?{% for key, value in request.GET.items %}{% if key != 'page' and key != 'batch' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}batch={{ eq.registration_batch }}"
+                     title="{{ eq.batch_size }} units registered together">
+                    <i class="bi bi-collection"></i> Group · {{ eq.batch_size }}
+                  </a>
+                </div>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'equipment:detail' eq.pk %}" class="eq-item-name">
+                  {{ eq.display_name }}
+                </a>
+                {% if request.user.sees_full_equipment_list and eq.assigned_user %}
+                <div class="eq-item-meta">
+                  <i class="bi bi-person"></i>
+                  {{ eq.assigned_user.get_full_name|default:eq.assigned_user.username }}
+                </div>
+                {% endif %}
+              </td>
+              <td>{{ eq.category.name }}</td>
+              <td>{{ eq|form_type_badge }}</td>
+              <td>{{ eq.fund_source|default:eq.fund|default:"—" }}</td>
+              <td>{{ eq.display_location }}</td>
+              <td class="text-nowrap">{{ eq.acquisition_cost|peso }}</td>
+              <td>{{ eq.property_status|property_status_badge }}</td>
+              <td class="text-end text-nowrap">
+                <div class="eq-row-actions">
+                  <a href="{% url 'equipment:detail' eq.pk %}" class="btn btn-sm btn-outline-primary" title="View details">
+                    <i class="bi bi-eye"></i>
+                  </a>
+                  {% if request.user.is_admin or request.user.is_custodian or request.user.is_supply_officer %}
+                  {% if eq.allows_inventory_tag %}
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-success js-inline-print-btn"
+                    title="Print inventory tag"
+                    data-inline-print-url="{% url 'equipment:inventory_tag_print' eq.pk %}"
+                    data-inline-print-name="{{ eq.display_name|escape }}"
+                    data-inline-print-property-number="{{ eq.property_number|escape }}">
+                    <i class="bi bi-printer"></i>
+                  </button>
+                  {% endif %}
+                  {% endif %}
+                  {% if request.user.is_admin or request.user.is_custodian %}
+                  <a href="{% url 'equipment:edit' eq.pk %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9">
+                <div class="eq-empty">
+                  <i class="bi bi-inbox"></i>
+                  <p class="eq-empty-title">No equipment found</p>
+                  <p class="eq-empty-text">Try clearing filters or adjusting your search.</p>
+                  <a href="{% url 'equipment:list' %}" class="btn btn-sm btn-outline-secondary">Clear filters</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <span class="eq-page-meta text-muted small">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      </span>
+      <nav aria-label="Equipment pages">
+        <ul class="pagination mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Inventory Tag Print Confirmation Modal -->
+<div class="modal fade" id="inventoryTagPrintModal" tabindex="-1" aria-labelledby="inventoryTagPrintModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="inventoryTagPrintModalLabel">
+          <i class="bi bi-printer me-2"></i>Print Inventory Tag
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p class="mb-2">Enter the inventory tag details before printing.</p>
+        <div class="border rounded bg-light px-3 py-2 mb-3">
+          <div class="fw-semibold" id="inventory-tag-print-name">Equipment</div>
+          <div class="text-muted small" id="inventory-tag-print-property-number">Property Number</div>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="inventory-tag-date-counted" class="form-label small fw-600">Date (Counted)</label>
+            <input type="date" class="form-control" id="inventory-tag-date-counted">
+          </div>
+          <div class="col-md-6">
+            <label for="inventory-tag-coa-representative" class="form-label small fw-600">COA Representative</label>
+            <input type="text" class="form-control" id="inventory-tag-coa-representative" maxlength="200" placeholder="Enter COA Representative">
+          </div>
+        </div>
+        <p class="text-muted small mt-3 mb-0">Leave fields blank to print without a date or COA Representative name.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="confirm-inventory-tag-print">
+          <i class="bi bi-printer me-1"></i>Print Tag
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QR Export Modal -->
+<div class="modal fade" id="qrExportModal" tabindex="-1" aria-labelledby="qrExportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="qrExportModalLabel">
+          <i class="bi bi-qr-code me-2"></i>Print / Download QR Codes
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p class="text-muted small mb-3">
+          Uses your current equipment filters (type, category, search). Choose QR size and resolution before printing or downloading.
+        </p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="qr-export-size" class="form-label small fw-600">QR Size (inches)</label>
+            <select class="form-select" id="qr-export-size">
+              <option value="0.75">0.75 × 0.75 inch</option>
+              <option value="1" selected>1 × 1 inch</option>
+              <option value="1.5">1.5 × 1.5 inch</option>
+              <option value="2">2 × 2 inch</option>
+              <option value="2.5">2.5 × 2.5 inch</option>
+              <option value="3">3 × 3 inch</option>
+              <option value="custom">Custom size…</option>
+            </select>
+          </div>
+          <div class="col-md-6" id="qr-export-custom-size-wrap" hidden>
+            <label for="qr-export-size-custom" class="form-label small fw-600">Custom Size (inches)</label>
+            <input type="number" class="form-control" id="qr-export-size-custom"
+                   min="0.5" max="4" step="0.25" value="1" placeholder="e.g. 1.25">
+          </div>
+          <div class="col-md-6">
+            <label for="qr-export-resolution" class="form-label small fw-600">Resolution</label>
+            <select class="form-select" id="qr-export-resolution">
+              <option value="96">96 DPI (Screen)</option>
+              <option value="150" selected>150 DPI (Standard Print)</option>
+              <option value="300">300 DPI (High Quality)</option>
+              <option value="600">600 DPI (Ultra)</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label for="qr-export-spacing" class="form-label small fw-600">Spacing Between QR (inches)</label>
+            <input type="number" class="form-control" id="qr-export-spacing"
+                   min="0" max="0.5" step="0.05" value="0.08" placeholder="e.g. 0.1">
+            <div class="form-text">Gap between each QR image on the print sheet (0–0.5 in).</div>
+          </div>
+          <div class="col-12">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="qr-export-show-name" checked>
+              <label class="form-check-label small" for="qr-export-show-name">
+                Include equipment name below each QR code
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-outline-primary" id="qr-export-download-btn">
+          <i class="bi bi-download me-1"></i>Download ZIP
+        </button>
+        <button type="button" class="btn btn-primary" id="qr-export-print-btn">
+          <i class="bi bi-printer me-1"></i>Print Sheet
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QR Scanner Modal -->
+<div class="modal fade" id="qrScanModal" tabindex="-1" aria-labelledby="qrScanModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="qrScanModalLabel">
+          <i class="bi bi-qr-code-scan me-2"></i>Scan Equipment QR Code
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-2">
+        <p class="text-muted small mb-3">Point your camera at the equipment QR label. Codes contain full identification details and a link to this record.</p>
+        <div id="qr-reader" class="rounded overflow-hidden mb-3"></div>
+        <div id="qr-scan-status" class="alert d-none mb-3" role="alert"></div>
+        <div class="border-top pt-3">
+          <label for="qr-manual-code" class="form-label small fw-600">Or enter code manually</label>
+          <div class="input-group">
+            <input type="text" id="qr-manual-code" class="form-control" placeholder="Property number">
+            <button type="button" class="btn btn-primary" id="qr-manual-lookup">
+              <i class="bi bi-search"></i> Lookup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .eq-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem 1rem;
+    padding: 0.65rem 1rem;
+    background: #fff;
+    border: 1px solid #edf1f7;
+    border-radius: 12px;
+  }
+  .eq-tools-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #94A3B8;
+  }
+  .eq-tools-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .eq-batch-banner {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 12px;
+    color: #0c4a6e;
+  }
+  .eq-batch-header td {
+    background: #f8fafc;
+    border-top: 2px solid #dbeafe;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.55rem 1rem !important;
+  }
+  .eq-batch-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+  }
+  .eq-batch-header__label {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.65rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+  .eq-batch-header__label i { color: #0284c7; }
+  .eq-batch-header__time {
+    font-weight: 500;
+    color: #64748b;
+    font-size: 0.78rem;
+  }
+  .eq-batch-header__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .eq-batch-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #0369a1;
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+    text-decoration: none;
+  }
+  .eq-batch-chip:hover {
+    background: #bae6fd;
+    color: #0c4a6e;
+  }
+  .eq-batch-chip.is-active {
+    background: #0ea5e9;
+    border-color: #0284c7;
+    color: #fff;
+  }
+  .eq-batch-chip--edit {
+    color: #475569;
+    background: #fff;
+    border-color: #cbd5e1;
+  }
+  .eq-batch-row td:first-child {
+    box-shadow: inset 3px 0 0 #38bdf8;
+  }
+  .eq-batch-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #0369a1;
+    text-decoration: none;
+  }
+  .eq-batch-mini:hover { color: #0c4a6e; text-decoration: underline; }
+
+  .eq-filter-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748B;
+    margin-bottom: 0.35rem;
+  }
+  .eq-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 1.6fr) repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.85rem 0.75rem;
+    align-items: end;
+  }
+  .equipment-filter-form .filter-field-actions {
+    min-width: 0;
+  }
+  .equipment-filter-form .form-control,
+  .equipment-filter-form .form-select {
+    width: 100%;
+  }
+  @media (max-width: 767.98px) {
+    .eq-filter-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .equipment-filter-form .filter-field-search,
+    .equipment-filter-form .filter-field-actions {
+      grid-column: 1 / -1;
+    }
+    .equipment-filter-form .filter-field-actions .d-flex {
+      justify-content: stretch;
+    }
+    .equipment-filter-form .filter-field-actions .btn {
+      flex: 1;
+    }
+  }
+
+  .eq-count-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--brand-surface);
+    border: 1px solid var(--brand-surface-border);
+    border-radius: 999px;
+    padding: 0.25rem 0.7rem;
+  }
+  .eq-table tbody td {
+    color: #334155;
+    font-size: 0.875rem;
+  }
+  .eq-item-name {
+    display: inline-block;
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .eq-item-name:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .eq-item-meta {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    color: #94A3B8;
+  }
+  .eq-item-meta i {
+    font-size: 0.7rem;
+    margin-right: 0.15rem;
+  }
+  .eq-row-actions {
+    display: inline-flex;
+    gap: 0.35rem;
+  }
+  .eq-empty {
+    text-align: center;
+    padding: 3.25rem 1.5rem;
+    color: #94A3B8;
+  }
+  .eq-empty i {
+    font-size: 2rem;
+    opacity: 0.55;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+  .eq-empty-title {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748B;
+  }
+  .eq-empty-text {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+  }
+  .eq-page-meta {
+    letter-spacing: 0.01em;
+  }
+
+  #qr-reader { border: 2px dashed #e2e8f0; min-height: 260px; }
+  #qr-reader video { border-radius: 8px; }
+  #qr-reader__scan_region { background: #f8fafc; }
+  #qr-reader__dashboard_section_csr button {
+    border-radius: 8px !important;
+    font-size: 0.875rem !important;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/html5-qrcode/html5-qrcode.min.js' %}"></script>
+<script>
+(function () {
+  const lookupUrl = "{% url 'equipment:lookup' %}";
+  const modalEl = document.getElementById('qrScanModal');
+  const statusEl = document.getElementById('qr-scan-status');
+  const manualInput = document.getElementById('qr-manual-code');
+  const printModalEl = document.getElementById('inventoryTagPrintModal');
+  const printNameEl = document.getElementById('inventory-tag-print-name');
+  const printPropertyNumberEl = document.getElementById('inventory-tag-print-property-number');
+  const printDateCountedEl = document.getElementById('inventory-tag-date-counted');
+  const printRepresentativeEl = document.getElementById('inventory-tag-coa-representative');
+  const confirmPrintBtn = document.getElementById('confirm-inventory-tag-print');
+  let html5QrCode = null;
+  let scanning = false;
+  let lookupInProgress = false;
+  let pendingPrintUrl = '';
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = 'alert alert-' + type + ' mb-3';
+    statusEl.classList.remove('d-none');
+  }
+
+  function hideStatus() {
+    statusEl.classList.add('d-none');
+  }
+
+  function printInventoryTag(url, options) {
+    const printUrl = new URL(url, window.location.origin);
+    // Force a fresh load so repeated prints re-trigger the print dialog.
+    printUrl.searchParams.set('_inline_print', Date.now().toString());
+    if (options) {
+      if (Object.prototype.hasOwnProperty.call(options, 'dateCounted')) {
+        printUrl.searchParams.set('date_counted', options.dateCounted || '');
+      }
+      if (Object.prototype.hasOwnProperty.call(options, 'representativeName')) {
+        printUrl.searchParams.set('representative_name', options.representativeName || '');
+      }
+    }
+    // Open in a real tab (instead of a hidden iframe) so the auto-print always has
+    // a visible page with a manual "Print Tag" button as a fallback if the
+    // browser blocks the automatic window.print() call.
+    const printWindow = window.open(printUrl.toString(), '_blank');
+    if (!printWindow) {
+      window.alert('Please allow pop-ups for this site, then try printing again.');
+    }
+  }
+
+  function showPrintConfirmation(url, name, propertyNumber) {
+    pendingPrintUrl = url;
+    if (printNameEl) {
+      printNameEl.textContent = name || 'Equipment';
+    }
+    if (printPropertyNumberEl) {
+      printPropertyNumberEl.textContent = propertyNumber || '';
+    }
+    if (printDateCountedEl) {
+      printDateCountedEl.value = '';
+    }
+    if (printRepresentativeEl) {
+      printRepresentativeEl.value = '';
+    }
+
+    if (window.bootstrap && printModalEl) {
+      window.bootstrap.Modal.getOrCreateInstance(printModalEl).show();
+      return;
+    }
+
+    if (window.confirm('Print inventory tag for ' + (name || 'this equipment') + '?')) {
+      printInventoryTag(url, {
+        dateCounted: '',
+        representativeName: '',
+      });
+    }
+  }
+
+  function lookupEquipment(code) {
+    if (lookupInProgress || !code.trim()) return;
+    lookupInProgress = true;
+    hideStatus();
+    showStatus('Looking up equipment…', 'info');
+
+    fetch(lookupUrl + '?code=' + encodeURIComponent(code.trim()))
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (data.found) {
+          showStatus('Found: ' + data.name + ' (' + data.property_number + '). Redirecting…', 'success');
+          stopScanner();
+          setTimeout(function () { window.location.href = data.url; }, 600);
+        } else {
+          showStatus(data.error || 'Equipment not found.', 'warning');
+          lookupInProgress = false;
+        }
+      })
+      .catch(function () {
+        showStatus('Lookup failed. Please try again.', 'danger');
+        lookupInProgress = false;
+      });
+  }
+
+  function onScanSuccess(decodedText) {
+    if (lookupInProgress) return;
+    lookupEquipment(decodedText);
+  }
+
+  function startScanner() {
+    if (scanning) return;
+    hideStatus();
+    manualInput.value = '';
+    lookupInProgress = false;
+
+    html5QrCode = new Html5Qrcode('qr-reader');
+    html5QrCode.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      onScanSuccess,
+      function () {}
+    ).then(function () {
+      scanning = true;
+    }).catch(function (err) {
+      showStatus('Camera unavailable: ' + err + '. Use manual entry below.', 'warning');
+    });
+  }
+
+  function stopScanner() {
+    if (!html5QrCode || !scanning) return;
+    html5QrCode.stop().then(function () {
+      html5QrCode.clear();
+      scanning = false;
+      html5QrCode = null;
+    }).catch(function () {
+      scanning = false;
+      html5QrCode = null;
+    });
+  }
+
+  modalEl.addEventListener('shown.bs.modal', startScanner);
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    stopScanner();
+    hideStatus();
+    lookupInProgress = false;
+    manualInput.value = '';
+  });
+
+  document.getElementById('qr-manual-lookup').addEventListener('click', function () {
+    lookupEquipment(manualInput.value);
+  });
+  manualInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      lookupEquipment(manualInput.value);
+    }
+  });
+
+  document.querySelectorAll('.js-inline-print-btn').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const url = button.getAttribute('data-inline-print-url');
+      const name = button.getAttribute('data-inline-print-name');
+      const propertyNumber = button.getAttribute('data-inline-print-property-number');
+      if (url) {
+        showPrintConfirmation(url, name, propertyNumber);
+      }
+    });
+  });
+
+  if (confirmPrintBtn) {
+    confirmPrintBtn.addEventListener('click', function () {
+      if (!pendingPrintUrl) {
+        return;
+      }
+      if (window.bootstrap && printModalEl) {
+        window.bootstrap.Modal.getOrCreateInstance(printModalEl).hide();
+      }
+      printInventoryTag(pendingPrintUrl, {
+        dateCounted: printDateCountedEl ? printDateCountedEl.value.trim() : '',
+        representativeName: printRepresentativeEl ? printRepresentativeEl.value.trim() : '',
+      });
+      pendingPrintUrl = '';
+    });
+  }
+
+  const printAssignedParBtn = document.getElementById('print-assigned-par-btn');
+  const printAssignedParLink = document.getElementById('print-assigned-par-link');
+  const assignedUserSelect = document.querySelector('#equipment-filter-form [name="assigned_user"]');
+  const parPrintAssignedBaseUrl = "{% url 'reports:par_print_assigned' %}";
+
+  const assignedUserErrorEl = document.getElementById('assigned-user-filter-error');
+  const assignedUserErrorMessage = 'Please select an Assigned User in the filters first.';
+
+  function showAssignedUserError() {
+    if (!assignedUserSelect || !assignedUserErrorEl) {
+      window.alert(assignedUserErrorMessage);
+      return;
+    }
+    assignedUserSelect.classList.add('is-invalid');
+    assignedUserErrorEl.textContent = assignedUserErrorMessage;
+    assignedUserErrorEl.classList.add('d-block');
+    assignedUserSelect.focus();
+    assignedUserSelect.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function clearAssignedUserError() {
+    if (!assignedUserSelect || !assignedUserErrorEl) {
+      return;
+    }
+    assignedUserSelect.classList.remove('is-invalid');
+    assignedUserErrorEl.textContent = '';
+    assignedUserErrorEl.classList.remove('d-block');
+  }
+
+  if (assignedUserSelect) {
+    assignedUserSelect.addEventListener('change', clearAssignedUserError);
+  }
+
+  if (printAssignedParBtn && printAssignedParLink) {
+    printAssignedParBtn.addEventListener('click', function () {
+      if (!assignedUserSelect) {
+        showAssignedUserError();
+        return;
+      }
+
+      const userId = assignedUserSelect.value;
+      if (!userId || userId === 'unassigned') {
+        showAssignedUserError();
+        return;
+      }
+
+      clearAssignedUserError();
+
+      printAssignedParLink.href = parPrintAssignedBaseUrl + '?assigned_user=' + encodeURIComponent(userId);
+      printAssignedParLink.click();
+    });
+  }
+
+  const qrExportPrintBaseUrl = "{% url 'equipment:qr_codes_print_all' %}";
+  const qrExportDownloadBaseUrl = "{% url 'equipment:qr_codes_download' %}";
+  const equipmentExportExcelBaseUrl = "{% url 'equipment:export_excel' %}";
+  const equipmentExportExcelBtn = document.getElementById('equipment-export-excel-btn');
+  const qrExportModalEl = document.getElementById('qrExportModal');
+  const qrExportSizeSelect = document.getElementById('qr-export-size');
+  const qrExportCustomSizeWrap = document.getElementById('qr-export-custom-size-wrap');
+  const qrExportCustomSizeInput = document.getElementById('qr-export-size-custom');
+  const qrExportResolutionSelect = document.getElementById('qr-export-resolution');
+  const qrExportSpacingInput = document.getElementById('qr-export-spacing');
+  const qrExportShowNameInput = document.getElementById('qr-export-show-name');
+  const qrExportPrintBtn = document.getElementById('qr-export-print-btn');
+  const qrExportDownloadBtn = document.getElementById('qr-export-download-btn');
+  const equipmentFilterForm = document.getElementById('equipment-filter-form');
+
+  function buildEquipmentFilterParams() {
+    const params = equipmentFilterForm
+      ? new URLSearchParams(new FormData(equipmentFilterForm))
+      : new URLSearchParams(window.location.search);
+    params.delete('page');
+    return params;
+  }
+
+  if (equipmentExportExcelBtn) {
+    equipmentExportExcelBtn.addEventListener('click', function () {
+      window.location.href = equipmentExportExcelBaseUrl + '?' + buildEquipmentFilterParams().toString();
+    });
+  }
+
+  function toggleQrCustomSizeField() {
+    if (!qrExportSizeSelect || !qrExportCustomSizeWrap) {
+      return;
+    }
+    const isCustom = qrExportSizeSelect.value === 'custom';
+    qrExportCustomSizeWrap.hidden = !isCustom;
+  }
+
+  function getQrExportSizeValue() {
+    if (!qrExportSizeSelect) {
+      return '1';
+    }
+    if (qrExportSizeSelect.value === 'custom') {
+      const customValue = parseFloat(qrExportCustomSizeInput ? qrExportCustomSizeInput.value : '1');
+      if (!customValue || customValue < 0.5) {
+        return '0.5';
+      }
+      if (customValue > 4) {
+        return '4';
+      }
+      return String(customValue);
+    }
+    return qrExportSizeSelect.value;
+  }
+
+  function getQrExportSpacingValue() {
+    const raw = parseFloat(qrExportSpacingInput ? qrExportSpacingInput.value : '0.08');
+    if (!raw && raw !== 0) {
+      return '0.08';
+    }
+    if (raw < 0) {
+      return '0';
+    }
+    if (raw > 0.5) {
+      return '0.5';
+    }
+    return String(raw);
+  }
+
+  function buildQrExportUrl(baseUrl) {
+    const params = buildEquipmentFilterParams();
+    params.set('qr_size', getQrExportSizeValue());
+    params.set('qr_resolution', qrExportResolutionSelect ? qrExportResolutionSelect.value : '150');
+    params.set('qr_spacing', getQrExportSpacingValue());
+    params.set('show_name', qrExportShowNameInput && qrExportShowNameInput.checked ? '1' : '0');
+    return baseUrl + '?' + params.toString();
+  }
+
+  function openQrPrintSheet() {
+    const printUrl = new URL(buildQrExportUrl(qrExportPrintBaseUrl), window.location.origin);
+    printUrl.searchParams.set('_inline_print', Date.now().toString());
+    const printWindow = window.open(printUrl.toString(), '_blank');
+    if (!printWindow) {
+      window.alert('Please allow pop-ups for this site, then try printing again.');
+      return;
+    }
+    if (window.bootstrap && qrExportModalEl) {
+      window.bootstrap.Modal.getOrCreateInstance(qrExportModalEl).hide();
+    }
+  }
+
+  function downloadQrZip() {
+    window.location.href = buildQrExportUrl(qrExportDownloadBaseUrl);
+    if (window.bootstrap && qrExportModalEl) {
+      window.bootstrap.Modal.getOrCreateInstance(qrExportModalEl).hide();
+    }
+  }
+
+  if (qrExportSizeSelect) {
+    qrExportSizeSelect.addEventListener('change', toggleQrCustomSizeField);
+    toggleQrCustomSizeField();
+  }
+
+  if (qrExportPrintBtn) {
+    qrExportPrintBtn.addEventListener('click', openQrPrintSheet);
+  }
+
+  if (qrExportDownloadBtn) {
+    qrExportDownloadBtn.addEventListener('click', downloadQrZip);
+  }
+
+})();
+</script>
+{% endblock %}

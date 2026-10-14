@@ -1,0 +1,107 @@
+/* PMS brand theme — DepEd Region I colors (offline-safe, loaded after Bootstrap) */
+:root {
+  --brand: #003087;
+  --primary: #003087;
+  --accent: #1a56db;
+  --accent-hover: #003087;
+  --accent-light: #3b82f6;
+  --header-bg: #003087;
+  --sidebar-bg: #003087;
+  --sidebar-text: #c8d8f0;
+  --sidebar-hover: #FFC72C;
+  --sidebar-active-bg: rgba(255, 199, 44, 0.15);
+  --brand-surface: #EEF2FF;
+  --brand-surface-border: #c2d4f0;
+  --brand-surface-text: #001a5e;
+  --focus-ring: rgba(0, 48, 135, 0.20);
+  --chart-brand: #003087;
+  --chart-brand-light: rgba(0, 48, 135, 0.12);
+
+  /* Bootstrap 5.3 theme overrides */
+  --bs-primary: #003087;
+  --bs-primary-rgb: 0, 48, 135;
+  --bs-link-color: #1a56db;
+  --bs-link-hover-color: #003087;
+  --bs-focus-ring-color: rgba(0, 48, 135, 0.25);
+  --bs-btn-focus-box-shadow: 0 0 0 0.25rem rgba(0, 48, 135, 0.25);
+}
+
+/* Buttons */
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #1a56db;
+  --bs-btn-border-color: #1a56db;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #003087;
+  --bs-btn-hover-border-color: #003087;
+  --bs-btn-focus-shadow-rgb: 0, 48, 135;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #003087;
+  --bs-btn-active-border-color: #003087;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #1a56db;
+  --bs-btn-disabled-border-color: #1a56db;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #003087;
+  --bs-btn-border-color: #1a56db;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #1a56db;
+  --bs-btn-hover-border-color: #1a56db;
+  --bs-btn-focus-shadow-rgb: 0, 48, 135;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #003087;
+  --bs-btn-active-border-color: #003087;
+}
+
+/* Pagination */
+.pagination {
+  --bs-pagination-color: #003087;
+  --bs-pagination-hover-color: #003087;
+  --bs-pagination-hover-bg: #EEF2FF;
+  --bs-pagination-hover-border-color: #c2d4f0;
+  --bs-pagination-focus-color: #003087;
+  --bs-pagination-active-color: #fff;
+  --bs-pagination-active-bg: #1a56db;
+  --bs-pagination-active-border-color: #1a56db;
+}
+
+/* Forms */
+.form-control:focus,
+.form-select:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 0.25rem rgba(0, 48, 135, 0.2);
+}
+
+.form-check-input:checked {
+  background-color: #003087;
+  border-color: #003087;
+}
+
+.form-check-input:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 0.25rem rgba(0, 48, 135, 0.25);
+}
+
+/* Utility classes */
+.text-primary { color: #003087 !important; }
+.bg-primary { background-color: #1a56db !important; }
+.border-primary { border-color: #1a56db !important; }
+.link-primary {
+  color: #1a56db !important;
+  text-decoration-color: rgba(26, 86, 219, 0.5) !important;
+}
+.link-primary:hover,
+.link-primary:focus {
+  color: #003087 !important;
+}
+
+/* Sidebar logo image */
+.brand-logo-img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 8px;
+}

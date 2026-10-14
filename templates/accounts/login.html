@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block extra_css %}
+<style>
+  .login-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    background: linear-gradient(160deg, #001a5e 0%, #003087 45%, #1a56db 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .login-page::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 100%, rgba(255, 199, 44, 0.20) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 10%, rgba(255, 255, 255, 0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .login-card {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+  .login-card-header {
+    padding: 2.25rem 2rem 0;
+    text-align: center;
+  }
+  .login-logo {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    background: transparent;
+    margin-bottom: 1.25rem;
+  }
+  .login-logo-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 6px 16px rgba(0, 48, 135, 0.28);
+  }
+  .login-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0;
+    line-height: 1.3;
+  }
+  .login-tagline {
+    font-size: 0.8125rem;
+    color: #6B7280;
+    margin: 0.35rem 0 0;
+  }
+  .login-card-body {
+    padding: 1.75rem 2rem 2rem;
+  }
+  .login-card-body .form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6B7280;
+    margin-bottom: 0.4rem;
+  }
+  .login-input-wrap {
+    position: relative;
+  }
+  .login-input-wrap .input-icon {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9CA3AF;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .login-input-wrap .form-control {
+    padding-left: 2.5rem;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+    border-color: #e5e7eb;
+    background: #fafbfc;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+  .login-input-wrap .form-control:focus {
+    background: #fff;
+  }
+  .login-input-wrap .form-control::placeholder {
+    color: #c4c9d0;
+  }
+  .btn-login {
+    padding: 0.7rem 1rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    margin-top: 0.25rem;
+    box-shadow: 0 4px 14px rgba(0, 48, 135, 0.35);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-login:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 48, 135, 0.4);
+  }
+  .btn-login:active {
+    transform: translateY(0);
+  }
+  .login-alert {
+    font-size: 0.8125rem;
+    padding: 0.65rem 0.875rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .login-footer {
+    position: relative;
+    margin-top: 1.75rem;
+    padding: 0 0.5rem;
+    max-width: 420px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.5;
+  }
+  @media (max-width: 575.98px) {
+    .login-page { padding: 1.25rem 0.75rem; }
+    .login-card-header { padding: 1.75rem 1.25rem 0; }
+    .login-card-body { padding: 1.5rem 1.25rem 1.75rem; }
+    .login-logo,
+    .login-logo-placeholder {
+      width: 96px;
+      height: 96px;
+    }
+    .login-logo-placeholder { font-size: 2rem; }
+    .login-title { font-size: 1.1rem; }
+    .login-footer { font-size: 0.68rem; margin-top: 1.25rem; }
+  }
+</style>
+{% endblock %}
+
+{% block auth_content %}
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-card-header">
+      {% if site_settings.logo %}
+      <img src="{% url 'accounts:login_logo' %}" alt="{{ site_settings.site_short_name }}" class="login-logo">
+      {% else %}
+      <div class="login-logo-placeholder">{{ site_settings.logo_letter }}</div>
+      {% endif %}
+      <h1 class="login-title">{{ site_settings.site_full_name }}</h1>
+      {% if site_settings.tagline %}
+      <p class="login-tagline">{{ site_settings.tagline }}</p>
+      {% endif %}
+    </div>
+
+    <div class="login-card-body">
+      {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags|default:'danger' }} login-alert" role="alert">
+          <i class="bi bi-exclamation-circle-fill"></i>
+          <span>{{ msg }}</span>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label" for="id_username">Username</label>
+          <div class="login-input-wrap">
+            <i class="bi bi-person input-icon"></i>
+            {{ form.username }}
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="id_password">Password</label>
+          <div class="login-input-wrap">
+            <i class="bi bi-lock input-icon"></i>
+            {{ form.password }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-login w-100">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="login-footer">
+    Copyright {% now "Y" %} - Don Mariano Marcos Memorial State University - North La Union Campus - College of Information Systems. All Rights Reserved.
+  </footer>
+</div>
+{% endblock %}

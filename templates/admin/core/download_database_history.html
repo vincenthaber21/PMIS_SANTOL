@@ -1,0 +1,201 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .db-history-hero {
+    background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 55%, #40916c 100%);
+    color: #f8fff9;
+    padding: 1.5rem 1.75rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+  .db-history-hero h1 {
+    margin: 0 0 0.4rem;
+    font-size: 1.45rem;
+    color: #fff;
+  }
+  .db-history-hero p {
+    margin: 0;
+    max-width: 44rem;
+    opacity: 0.92;
+    line-height: 1.45;
+  }
+  .db-history-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .db-history-actions .button {
+    padding: 0.65rem 1.15rem;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    text-decoration: none;
+  }
+  .db-history-actions .button-primary {
+    background: #1b4332;
+    color: #fff;
+    border: none;
+  }
+  .db-history-actions .button-primary:hover,
+  .db-history-actions .button-primary:focus {
+    background: #081c15;
+  }
+  .db-history-actions .button-secondary {
+    background: #fff;
+    color: #1b4332;
+    border: 1px solid #95d5b2;
+  }
+  .db-history-note {
+    background: #fff8e6;
+    border-left: 4px solid #e9c46a;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.45;
+    color: #3d2e00;
+  }
+  .db-history-table caption {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.5rem 0;
+  }
+  .db-history-empty {
+    padding: 1.5rem;
+    text-align: center;
+    color: #555;
+    background: #f8faf9;
+    border: 1px dashed #d8e2dc;
+    border-radius: 8px;
+  }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo;
+  <a href="{{ export_url }}">{% translate 'Database import / export' %}</a>
+  &rsaquo; {% translate 'Download history' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="db-history-hero">
+  <h1>{% translate 'Database download history' %}</h1>
+  <p>
+    Every ZIP or JSON export is saved here so you can re-download previous backups.
+    Files include password hashes — keep them confidential.
+  </p>
+</div>
+
+<div class="db-history-note">
+  <strong>Tip:</strong> On
+  <a href="{{ export_url }}">Database import / export</a>,
+  choose a year and quarter to automatically download a full ZIP tagged for that quarter.
+</div>
+
+{% if quarterly_backups %}
+<div class="module" style="margin-bottom:1.5rem;">
+  <table class="db-history-table">
+    <caption>{% translate 'Quarterly backups' %}</caption>
+    <thead>
+      <tr>
+        <th>{% translate 'Quarter' %}</th>
+        <th>{% translate 'Created' %}</th>
+        <th>{% translate 'Filename' %}</th>
+        <th>{% translate 'Size' %}</th>
+        <th>{% translate 'By' %}</th>
+        <th>{% translate 'Action' %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in quarterly_backups %}
+      <tr>
+        <td><strong>{{ item.label }}</strong></td>
+        <td>{{ item.created_at|date:"Y-m-d H:i:s" }}</td>
+        <td>{% if item.download %}<code>{{ item.download.filename }}</code>{% else %}—{% endif %}</td>
+        <td>{% if item.download %}{{ item.download.file_size_display }}{% else %}—{% endif %}</td>
+        <td>{% firstof item.created_by.get_username "—" %}</td>
+        <td>
+          {% if item.download %}
+          <a class="button" href="{% url 'admin:download_database_saved_file' item.download.pk %}">
+            {% translate 'Download' %}
+          </a>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="db-history-actions">
+  <a class="button button-primary" href="{{ export_url }}">
+    New quarterly backup
+  </a>
+  <a class="button button-secondary" href="{{ zip_url }}">
+    Download new ZIP now
+  </a>
+  <a class="button button-secondary" href="{{ json_url }}">
+    Download new JSON
+  </a>
+  <a class="button" href="{{ export_url }}?auto=0">
+    Back to import / export
+  </a>
+</div>
+
+{% if downloads %}
+<div class="module">
+  <table class="db-history-table">
+    <caption>
+      {% translate 'All saved downloads' %} — {{ downloads|length }}
+      {% translate 'file(s)' %}
+    </caption>
+    <thead>
+      <tr>
+        <th>{% translate 'Date / time' %}</th>
+        <th>{% translate 'Quarter' %}</th>
+        <th>{% translate 'Filename' %}</th>
+        <th>{% translate 'Format' %}</th>
+        <th>{% translate 'Size' %}</th>
+        <th>{% translate 'Objects' %}</th>
+        <th>{% translate 'Downloaded by' %}</th>
+        <th>{% translate 'Notes' %}</th>
+        <th>{% translate 'Action' %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in downloads %}
+      <tr>
+        <td>{{ item.created_at|date:"Y-m-d H:i:s" }}</td>
+        <td>{% firstof item.quarter_label "—" %}</td>
+        <td><code>{{ item.filename }}</code></td>
+        <td>{{ item.export_format|upper }}</td>
+        <td>{{ item.file_size_display }}</td>
+        <td>{{ item.object_count }}</td>
+        <td>{% firstof item.created_by.get_username "—" %}</td>
+        <td>{{ item.notes|default:"—" }}</td>
+        <td>
+          <a class="button" href="{% url 'admin:download_database_saved_file' item.pk %}">
+            {% translate 'Download' %}
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="db-history-empty">
+  <p>{% translate 'No downloads saved yet.' %}</p>
+  <p>
+    <a class="button button-primary" href="{{ export_url }}">
+      {% translate 'Create first quarterly backup' %}
+    </a>
+  </p>
+</div>
+{% endif %}
+{% endblock %}

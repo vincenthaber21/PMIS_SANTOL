@@ -1,0 +1,492 @@
+{% load pms_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Tag — {{ equipment.property_number }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #e8e8e8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .toolbar {
+      margin-bottom: 16px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .toolbar button, .toolbar a {
+      font-size: 14px;
+      padding: 8px 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      text-decoration: none;
+      color: #333;
+    }
+
+    .toolbar button.primary {
+      background: #c41e3a;
+      color: #fff;
+      border-color: #a01830;
+    }
+
+    /* COA official red — preserved in print via print-color-adjust below */
+    :root {
+      --tag-red: #c41e3a;
+    }
+
+    html {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      color-adjust: exact;
+    }
+
+    /* Sticker — 4" wide x 3.5" tall */
+    .inventory-tag {
+      width: 4in;
+      height: 3.5in;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border: 2px solid var(--tag-red);
+      font-size: 6.5pt;
+      color: #000;
+      line-height: 1.15;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      color-adjust: exact;
+    }
+
+    .tag-bar {
+      flex-shrink: 0;
+      background: var(--tag-red);
+      color: #fff;
+      text-align: center;
+      font-weight: bold;
+      font-size: 6pt;
+      padding: 2px 4px;
+      letter-spacing: 0.2px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      color-adjust: exact;
+    }
+
+    .tag-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 3px 8px 2px;
+      min-height: 0;
+    }
+
+    .tag-header {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: 0.58in 1fr 1.05in;
+      gap: 4px;
+      align-items: start;
+      margin-bottom: 2px;
+    }
+
+    .tag-seal {
+      width: 0.54in;
+      height: 0.54in;
+      border: 1.5px solid #333;
+      border-radius: 50%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5pt;
+      text-align: center;
+      font-weight: bold;
+      line-height: 1.1;
+      padding: 2px;
+    }
+
+    .tag-seal img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .tag-seal .seal-letter {
+      font-size: 9pt;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .tag-heading {
+      text-align: center;
+      font-size: 5.5pt;
+      line-height: 1.22;
+    }
+
+    .tag-heading .line1 { font-size: 5pt; }
+    .tag-heading .line2 { font-weight: bold; font-size: 6pt; }
+    .tag-heading .line3 { font-weight: bold; font-size: 6.5pt; }
+
+    .tag-number {
+      text-align: right;
+      font-size: 6pt;
+    }
+
+    .tag-number .no-label {
+      font-size: 5.5pt;
+      margin-bottom: 1px;
+    }
+
+    .tag-number .no-box {
+      display: inline-block;
+      border: 1px solid #000;
+      padding: 1px 3px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 5pt;
+      line-height: 1.2;
+      word-break: break-all;
+      max-width: 100%;
+    }
+
+    .tag-number .inv-label {
+      font-weight: bold;
+      font-size: 6.5pt;
+      margin-top: 1px;
+    }
+
+    /* Auto-fill remaining height */
+    .tag-fields {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      min-height: 0;
+    }
+
+    .field-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 3px;
+      line-height: 1.5;
+    }
+
+    .field-label {
+      font-size: 5.5pt;
+      font-weight: normal;
+      color: #444;
+      line-height: 1.5;
+      padding-bottom: 1px;
+    }
+
+    .field-value {
+      border-bottom: 1px solid #000;
+      min-height: 14px;
+      padding: 2px 2px 4px;
+      font-size: 7pt;
+      font-weight: 700;
+      word-break: break-word;
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .field-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .fields-with-qr {
+      display: grid;
+      grid-template-columns: 1fr 0.74in;
+      gap: 6px;
+      align-items: stretch;
+      flex: 1.15;
+    }
+
+    .fields-left {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      min-height: 0;
+    }
+
+    .fields-left .field-block {
+      flex: 1;
+    }
+
+    .check-mark {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border: 1px solid #000;
+      text-align: center;
+      line-height: 9px;
+      font-size: 7pt;
+      font-weight: bold;
+      margin-left: 5px;
+      vertical-align: middle;
+      flex-shrink: 0;
+    }
+
+    .status-row .field-value {
+      font-size: 6.5pt;
+      align-items: center;
+      line-height: 1.5;
+      min-height: 16px;
+      padding-top: 3px;
+      padding-bottom: 4px;
+    }
+
+    .sig-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      flex: 0.9;
+      align-items: end;
+    }
+
+    .sig-block {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      height: 100%;
+    }
+
+    .sig-block .sig-line {
+      border-bottom: 1px solid #000;
+      flex: 1;
+      min-height: 16px;
+      margin-bottom: 2px;
+      font-size: 6.5pt;
+      text-align: center;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 2px 2px 4px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .sig-block .sig-label {
+      font-size: 5.5pt;
+      text-align: center;
+      color: #444;
+      flex-shrink: 0;
+      line-height: 1.5;
+      padding-bottom: 1px;
+    }
+
+    .tag-qr {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+    }
+
+    .tag-qr img {
+      width: 0.68in;
+      height: 0.68in;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+      image-rendering: pixelated;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    @page {
+      size: 4in 3.5in;
+      margin: 0;
+    }
+
+    @media print {
+      *,
+      *::before,
+      *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      html, body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      body {
+        background: #fff;
+        padding: 0;
+      }
+
+      .toolbar { display: none !important; }
+
+      .inventory-tag {
+        width: 4in;
+        height: 3.5in;
+        border: 2px solid var(--tag-red) !important;
+        page-break-inside: avoid;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      .tag-bar {
+        background-color: var(--tag-red) !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      .tag-seal img,
+      .tag-qr img {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button type="button" class="primary" onclick="window.print()">Print Tag</button>
+    <a href="{% url 'equipment:list' %}">Back to Inventory</a>
+  </div>
+
+  <div class="inventory-tag">
+    <div class="tag-bar">"COA" CIRCULAR NO. 80-124</div>
+
+    <div class="tag-body">
+      <div class="tag-header">
+        <div class="tag-seal">
+          {% if logo_url %}
+          <img src="{{ logo_url }}" alt="{{ site_settings.site_short_name }} seal">
+          {% else %}
+          <span class="seal-letter">{{ site_settings.logo_letter }}</span>
+          {% endif %}
+        </div>
+        <div class="tag-heading">
+          <div class="line1">Republic of the Philippines</div>
+          <div class="line2">PROVINCE OF {{ lgu_province|upper }}</div>
+          <div class="line3">MUNICIPALITY OF {{ lgu_municipality|upper }}</div>
+        </div>
+        <div class="tag-number">
+          <div class="no-label">No.</div>
+          <div class="no-box">{{ inventory_number }}</div>
+          <div class="inv-label">Inventory Tag</div>
+        </div>
+      </div>
+
+      <div class="tag-fields">
+        <div class="fields-with-qr">
+          <div class="fields-left">
+            <div class="field-pair">
+              <div class="field-block">
+                <div class="field-value">{{ office_location|default:"&nbsp;" }}</div>
+                <div class="field-label">Office / Location</div>
+              </div>
+              <div class="field-block">
+                <div class="field-value">{{ person_accountable|default:"&nbsp;" }}</div>
+                <div class="field-label">Person Accountable</div>
+              </div>
+            </div>
+            <div class="field-block">
+              <div class="field-value">{{ article_name }}</div>
+              <div class="field-label">Article</div>
+            </div>
+          </div>
+          {% if qr_code_data %}
+          <div class="tag-qr">
+            <img src="{{ qr_code_data }}" alt="QR Code">
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="field-pair">
+          <div class="field-block">
+            <div class="field-value">{{ property_number }}</div>
+            <div class="field-label">Property No.</div>
+          </div>
+          <div class="field-block">
+            <div class="field-value">{{ serial_number|default:"&nbsp;" }}</div>
+            <div class="field-label">Serial No.</div>
+          </div>
+        </div>
+
+        <div class="field-pair status-row">
+          <div class="field-block">
+            <div class="field-value">
+              Serviceable<span class="check-mark">{% if is_serviceable %}✓{% endif %}</span>
+            </div>
+          </div>
+          <div class="field-block">
+            <div class="field-value">
+              Unserviceable<span class="check-mark">{% if not is_serviceable %}✓{% endif %}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-pair">
+          <div class="field-block">
+            <div class="field-value">{{ quantity }}</div>
+            <div class="field-label">Unit / Quantity</div>
+          </div>
+          <div class="field-block">
+            <div class="field-value">{{ acquisition_cost|peso }}</div>
+            <div class="field-label">Acquisition Cost</div>
+          </div>
+        </div>
+
+        <div class="field-pair">
+          <div class="field-block">
+            <div class="field-value">{% if date_acquired %}{{ date_acquired|date:"m/d/Y" }}{% else %}&nbsp;{% endif %}</div>
+            <div class="field-label">Date:(Acquired)</div>
+          </div>
+          <div class="field-block">
+            <div class="field-value">{% if date_counted %}{{ date_counted|date:"m/d/Y" }}{% else %}&nbsp;{% endif %}</div>
+            <div class="field-label">Date:(Counted)</div>
+          </div>
+        </div>
+
+        <div class="sig-row">
+          <div class="sig-block">
+            <div class="sig-line">{{ representative_name|default:"&nbsp;" }}</div>
+            <div class="sig-label">COA Representative</div>
+          </div>
+          <div class="sig-block">
+            <div class="sig-line">{{ custodian_name|default:"&nbsp;" }}</div>
+            <div class="sig-label">Property Custodian</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tag-bar">TAMPERING THIS STICKER IS PUNISHABLE BY LAW</div>
+  </div>
+
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () { window.print(); }, 300);
+    });
+  </script>
+</body>
+</html>

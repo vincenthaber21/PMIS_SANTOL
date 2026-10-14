@@ -1,0 +1,14 @@
+Hello {{ user.get_full_name|default:user.username }},
+
+Your account for the {{ site_name }} has been created.
+
+Username: {{ user.username }}
+Email: {{ user.email }}
+Role: {{ user.role }}
+{% if user.department %}Department: {{ user.department }}
+{% endif %}
+Temporary password: {{ password }}
+
+Sign in here: {{ login_url }}
+
+Please change your password after your first login.

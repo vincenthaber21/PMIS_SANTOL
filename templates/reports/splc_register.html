@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}SPLC Register{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1><i class="bi bi-journal-text me-2"></i>SPLC Register</h1>
+    <div class="breadcrumb">
+      <a href="{% url 'reports:index' %}">Reports</a> /
+      <a href="{% url 'reports:coa_forms' %}">COA Forms</a> / SPLC Register
+    </div>
+  </div>
+  {% if total_count %}
+  <div class="btn-group">
+    <a href="{% url 'reports:splc_print_all' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+       class="btn btn-secondary">
+      <i class="bi bi-file-earmark-pdf me-1"></i>Download All SPLCs (PDF)
+    </a>
+    <a href="{% url 'reports:splc_export_all_excel' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+       class="btn btn-success">
+      <i class="bi bi-file-earmark-excel me-1"></i>Download All SPLCs (Excel)
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">Total SPLC Items</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--primary);">{{ total_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">In Maintenance</div>
+        <div style="font-size:2rem;font-weight:700;" class="{% if maintenance_count %}text-warning{% else %}text-success{% endif %}">
+          {{ maintenance_count }}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body">
+        <div class="text-muted small">COA Form</div>
+        <div class="mt-1"><span class="badge bg-secondary">Annex A.3 — SPLC</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">Filters</div>
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-2">
+        <label class="form-label">Fund</label>
+        <select name="fund" class="form-select">
+          <option value="">All Funds</option>
+          {% for val, label in fund_choices %}
+          <option value="{{ val }}" {% if selected_fund == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Year</label>
+        <select name="year" class="form-select">
+          <option value="">All Years</option>
+          {% for y in year_choices %}
+          <option value="{{ y }}" {% if selected_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Classification</label>
+        <select name="classification" class="form-select">
+          <option value="">All Classifications</option>
+          {% for val, label in classification_choices %}
+          <option value="{{ val }}" {% if selected_classification == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Status</label>
+        <select name="status" class="form-select">
+          <option value="">All Statuses</option>
+          {% for val, label in status_choices %}
+          {% if val != 'Retired' %}
+          <option value="{{ val }}" {% if selected_status == val %}selected{% endif %}>{{ label }}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-select">
+          <option value="">All Departments</option>
+          {% for dept in department_choices %}
+          <option value="{{ dept.pk }}" {% if selected_department == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary flex-grow-1">
+          <i class="bi bi-funnel me-1"></i>Filter
+        </button>
+        <a href="{% url 'reports:splc_register' %}" class="btn btn-outline-secondary">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span>Semi-Expendable Property Ledger Cards</span>
+    <div class="d-flex align-items-center gap-2">
+      {% if total_count %}
+      <div class="btn-group btn-group-sm">
+        <a href="{% url 'reports:splc_print_all' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+           class="btn btn-outline-secondary">
+          <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+        </a>
+        <a href="{% url 'reports:splc_export_all_excel' %}?fund={{ selected_fund }}&year={{ selected_year }}&status={{ selected_status }}&classification={{ selected_classification }}&department={{ selected_department }}"
+           class="btn btn-outline-success">
+          <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </a>
+      </div>
+      {% endif %}
+      <span class="badge bg-secondary">{{ total_count }} record(s)</span>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Property No.</th>
+          <th>Description</th>
+          <th>Classification</th>
+          <th>Fund</th>
+          <th>Purchase Date</th>
+          <th>Amount</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+          <th>Print</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for eq in equipment_list %}
+        <tr class="{% if eq.status == 'Borrowed' %}table-info{% elif eq.status == 'Maintenance' %}table-warning{% endif %}">
+          <td>
+            <a href="{% url 'equipment:detail' eq.pk %}"><code>{{ eq.property_number }}</code></a>
+          </td>
+          <td>
+            {{ eq.name }}
+            {% if eq.brand %}<small class="text-muted d-block">{{ eq.brand }}{% if eq.model %} {{ eq.model }}{% endif %}</small>{% endif %}
+          </td>
+          <td>{{ eq.classification|classification_badge }}</td>
+          <td>{{ eq.fund }}</td>
+          <td>{{ eq.purchase_date|default:"—" }}</td>
+          <td>
+            {% if eq.acquisition_cost %}{{ eq.acquisition_cost|peso }}{% else %}{{ eq.purchase_cost|peso }}{% endif %}
+          </td>
+          <td>
+            {% if eq.assigned_user %}
+            {{ eq.assigned_user.get_full_name|default:eq.assigned_user.username }}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ eq.status|status_badge }}</td>
+          <td>
+            <div class="btn-group btn-group-sm">
+              <a href="{% url 'reports:coa_splc' eq.pk %}" class="btn btn-outline-secondary" title="SPLC — PDF">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </a>
+              <a href="{% url 'reports:coa_splc_excel' eq.pk %}" class="btn btn-outline-success" title="SPLC — Excel">
+                <i class="bi bi-file-earmark-excel"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-4">
+            No semi-expendable ledger cards yet. Add equipment classified as Semi-Expendable or Low-Value Semi-Expendable.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

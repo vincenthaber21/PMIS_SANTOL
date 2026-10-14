@@ -1,0 +1,7 @@
+Hello {{ user.get_full_name|default:user.username }},
+
+You have been {{ action_label }} the following property in {{ site_name }}.
+
+{{ details_text }}
+
+View equipment: {{ equipment_url }}

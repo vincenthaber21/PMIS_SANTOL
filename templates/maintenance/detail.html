@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}MR-{{ mr.pk|stringformat:"04d" }}{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between">
+  <div>
+    <h1>MR-{{ mr.pk|stringformat:"04d" }}</h1>
+    <div class="breadcrumb"><a href="{% url 'maintenance:list' %}">Maintenance</a> / Detail</div>
+  </div>
+  <div>{{ mr.repair_status|status_badge }} {{ mr.priority|priority_badge }}</div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-7">
+    <div class="card mb-4">
+      <div class="card-header">Request Details</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6"><small class="text-muted d-block">Equipment</small><a href="{% url 'equipment:detail' mr.equipment.pk %}">{{ mr.equipment.name }}</a></div>
+          <div class="col-md-6"><small class="text-muted d-block">Reported By</small>{{ mr.reported_by|default:"—" }}</div>
+          <div class="col-12"><small class="text-muted d-block">Issue Description</small>{{ mr.issue_description }}</div>
+          <div class="col-md-4"><small class="text-muted d-block">Priority</small>{{ mr.priority|priority_badge }}</div>
+          <div class="col-md-4"><small class="text-muted d-block">Status</small>{{ mr.repair_status|status_badge }}</div>
+          <div class="col-md-4"><small class="text-muted d-block">Date Opened</small>{{ mr.date_opened }}</div>
+          <div class="col-md-4"><small class="text-muted d-block">Estimated Cost</small>{{ mr.estimated_cost|peso }}</div>
+          <div class="col-md-4"><small class="text-muted d-block">Actual Cost</small>{{ mr.actual_cost|peso }}</div>
+          <div class="col-md-4"><small class="text-muted d-block">Completion Date</small>{{ mr.completion_date|default:"—" }}</div>
+          {% if mr.technician_notes %}
+          <div class="col-12"><small class="text-muted d-block">Technician Notes</small>{{ mr.technician_notes }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if form %}
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header">Update Request</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3"><label class="form-label">Technician</label>{{ form.technician }}</div>
+          <div class="mb-3"><label class="form-label">Status</label>{{ form.repair_status }}</div>
+          <div class="mb-3"><label class="form-label">Actual Cost (₱)</label>{{ form.actual_cost }}</div>
+          <div class="mb-3"><label class="form-label">Completion Date</label>{{ form.completion_date }}</div>
+          <div class="mb-3"><label class="form-label">Notes</label>{{ form.technician_notes }}</div>
+          <button type="submit" class="btn btn-primary w-100"><i class="bi bi-save me-1"></i>Update</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

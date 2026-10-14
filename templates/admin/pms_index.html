@@ -1,0 +1,160 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  #pms-database-export-module {
+    margin-bottom: 1.5rem;
+  }
+  #pms-database-export-module .pms-db-caption {
+    background: var(--header-bg, #417690);
+    color: var(--header-link-color, #fff);
+    padding: 8px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  #pms-database-export-module .pms-db-caption a {
+    color: inherit;
+    text-decoration: none;
+  }
+  #pms-database-export-module .pms-db-caption a:hover,
+  #pms-database-export-module .pms-db-caption a:focus {
+    text-decoration: underline;
+  }
+  #pms-database-export-module .pms-db-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--hairline-color, #eaecef);
+    background: var(--body-bg, #fff);
+  }
+  #pms-database-export-module .pms-db-row:last-child {
+    border-bottom: none;
+  }
+  #pms-database-export-module .pms-db-label {
+    flex: 0 0 11rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  #pms-database-export-module .pms-db-label a {
+    color: var(--link-fg, #447e9b);
+  }
+  #pms-database-export-module .pms-db-desc {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: var(--body-quiet-color, #666);
+    line-height: 1.4;
+  }
+  #pms-database-export-module .pms-db-action {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  @media (max-width: 767px) {
+    #pms-database-export-module .pms-db-row {
+      flex-wrap: wrap;
+    }
+    #pms-database-export-module .pms-db-label {
+      flex-basis: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% if user.is_superuser %}
+<div class="module" id="pms-database-export-module">
+  <div class="pms-db-caption">
+    <a href="{% url 'admin:download_database' %}" title="Import or export all database data">
+      Database import / export
+    </a>
+  </div>
+  <div class="pms-db-row">
+    <div class="pms-db-label">
+      <a href="{% url 'admin:download_database' %}">Quarterly backup</a>
+    </div>
+    <div class="pms-db-desc">
+      Choose year and quarter, then automatically download a full ZIP of all data.
+    </div>
+    <div class="pms-db-action">
+      <a href="{% url 'admin:download_database' %}" class="addlink">Open export</a>
+    </div>
+  </div>
+  <div class="pms-db-row">
+    <div class="pms-db-label">
+      <a href="{% url 'admin:download_database_history' %}">View all downloads</a>
+    </div>
+    <div class="pms-db-desc">
+      Browse and re-download every previous quarterly JSON/ZIP backup.
+    </div>
+    <div class="pms-db-action">
+      <a href="{% url 'admin:download_database_history' %}" class="viewlink">Open history</a>
+    </div>
+  </div>
+  <div class="pms-db-row">
+    <div class="pms-db-label">
+      <a href="{% url 'admin:download_database' %}?auto=0">Import data</a>
+    </div>
+    <div class="pms-db-desc">
+      Restore from a previous JSON or ZIP backup. Merge only — users are preserved.
+    </div>
+    <div class="pms-db-action">
+      <a href="{% url 'admin:download_database' %}?auto=0" class="changelink">Open import</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{{ block.super }}
+{% endblock %}
+
+{% block sidebar %}
+<div id="content-related">
+  {% if user.is_superuser %}
+  <div class="module" id="pms-backup-module">
+    <h2>{% translate 'Backup' %}</h2>
+    <ul class="actionlist">
+      <li class="changelink">
+        <a href="{% url 'admin:download_database' %}">Import / export database</a>
+        <br>
+        <span class="mini quiet">Schedule month/day/time + ZIP</span>
+      </li>
+      <li class="viewlink">
+        <a href="{% url 'admin:download_database_history' %}">View all downloads</a>
+        <br>
+        <span class="mini quiet">Saved backup history</span>
+      </li>
+    </ul>
+  </div>
+  {% endif %}
+  <div class="module" id="recent-actions-module">
+    <h2>{% translate 'Recent actions' %}</h2>
+    <h3>{% translate 'My actions' %}</h3>
+    {% load log %}
+    {% get_admin_log 10 as admin_log for_user user %}
+    {% if not admin_log %}
+    <p>{% translate 'None available' %}</p>
+    {% else %}
+    <ul class="actionlist">
+      {% for entry in admin_log %}
+      <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+        {% if entry.is_deletion or not entry.get_admin_url %}
+          {{ entry.object_repr }}
+        {% else %}
+          <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+        {% endif %}
+        <br>
+        {% if entry.content_type %}
+          <span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>
+        {% else %}
+          <span class="mini quiet">{% translate 'Unknown content' %}</span>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

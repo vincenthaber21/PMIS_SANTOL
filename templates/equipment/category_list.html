@@ -1,0 +1,932 @@
+{% extends 'base.html' %}
+
+{% block title %}Category{% endblock %}
+
+{% block content %}
+<div class="cat-page">
+  <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-start">
+      <span class="page-icon"><i class="bi bi-tags"></i></span>
+      <div>
+        <h1>Category</h1>
+        <div class="breadcrumb">
+          Equipment · {{ total_count }} categor{{ total_count|pluralize:"y,ies" }}
+        </div>
+      </div>
+    </div>
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+        <i class="bi bi-plus-lg me-1"></i>Add Category
+      </button>
+    </div>
+  </div>
+
+  <div class="card mb-3 cat-filter-card">
+    <div class="card-body">
+      <form class="cat-filter-form" method="get">
+        <div class="cat-filter-grid">
+          <div class="filter-field filter-field-search">
+            <label class="cat-filter-label" for="cat-search">Search</label>
+            <input type="search" id="cat-search" name="search" class="form-control"
+                   placeholder="Search by name, code, or type…" value="{{ search }}">
+          </div>
+          <div class="filter-field">
+            <label class="cat-filter-label" for="cat-per-page">Rows</label>
+            <select id="cat-per-page" name="per_page" class="form-select" onchange="this.form.submit()">
+              <option value="10" {% if per_page == 10 %}selected{% endif %}>10 per page</option>
+              <option value="20" {% if per_page == 20 %}selected{% endif %}>20 per page</option>
+              <option value="50" {% if per_page == 50 %}selected{% endif %}>50 per page</option>
+            </select>
+          </div>
+          <div class="filter-field filter-field-actions">
+            <span class="cat-filter-label d-none d-md-block">&nbsp;</span>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search me-1"></i>Search
+              </button>
+              {% if search %}
+              <a href="{% url 'equipment:category_list' %}" class="btn btn-outline-secondary">Clear</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card cat-results-card">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <span>Category list</span>
+        <span class="card-subtitle">Equipment classification codes used for property numbering</span>
+      </div>
+      <span class="cat-count-chip">{{ total_count }} shown</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 cat-table">
+          <thead>
+            <tr>
+              <th style="width:40px;"></th>
+              <th style="width:56px;">#</th>
+              <th>Name</th>
+              <th>Code</th>
+              <th>Property Type</th>
+              <th>Items</th>
+              <th>Registered</th>
+              <th>Status</th>
+              <th class="text-end" style="width:200px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in page_obj %}
+            <tr class="cat-main-row" data-category-id="{{ item.pk }}">
+              <td class="text-center">
+                <button type="button"
+                        class="btn btn-sm btn-link cat-expand-btn p-0"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#cat-equipment-{{ item.pk }}"
+                        aria-expanded="false"
+                        aria-controls="cat-equipment-{{ item.pk }}"
+                        title="Show registered equipment">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </td>
+              <td class="text-muted">{{ forloop.counter0|add:page_obj.start_index }}</td>
+              <td>
+                <button type="button"
+                        class="cat-item-name btn-edit-category"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editCategoryModal"
+                        data-id="{{ item.pk }}"
+                        data-name="{{ item.name }}"
+                        data-code="{{ item.code }}"
+                        data-property-type-code="{{ item.property_type_code }}"
+                        data-status="{{ item.status }}">
+                  {{ item.name }}
+                </button>
+              </td>
+              <td>
+                <span class="cat-code">{{ item.code }}</span>
+              </td>
+              <td>
+                {% if item.property_type_code %}
+                <span class="cat-code">{{ item.property_type_code }}</span>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="cat-equipment-count" title="Article/item names">{{ item.item_count }}</span>
+              </td>
+              <td>
+                <button type="button"
+                        class="cat-equipment-count cat-equipment-count-btn"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#cat-equipment-{{ item.pk }}"
+                        aria-expanded="false"
+                        title="Show registered equipment">
+                  {{ item.equipment_count }}
+                </button>
+              </td>
+              <td>
+                {% if item.status == 'Active' %}
+                <span class="badge-soft badge-soft-success">Active</span>
+                {% else %}
+                <span class="badge-soft badge-soft-neutral">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-end text-nowrap">
+                <div class="cat-row-actions">
+                  <button type="button" class="btn btn-sm btn-outline-success btn-add-item" title="Add Article/Item"
+                    data-bs-toggle="modal" data-bs-target="#addCategoryItemModal"
+                    data-id="{{ item.pk }}"
+                    data-name="{{ item.name }}"
+                    data-code="{{ item.code }}"
+                    {% if item.status != 'Active' %}disabled{% endif %}>
+                    <i class="bi bi-box-seam"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-primary btn-add-equipment" title="Add Equipment"
+                    data-bs-toggle="modal" data-bs-target="#addCategoryEquipmentModal"
+                    data-id="{{ item.pk }}"
+                    data-name="{{ item.name }}"
+                    data-code="{{ item.code }}"
+                    {% if item.status != 'Active' %}disabled{% endif %}>
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-primary btn-edit-category" title="Edit"
+                    data-bs-toggle="modal" data-bs-target="#editCategoryModal"
+                    data-id="{{ item.pk }}"
+                    data-name="{{ item.name }}"
+                    data-code="{{ item.code }}"
+                    data-property-type-code="{{ item.property_type_code }}"
+                    data-status="{{ item.status }}">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <form method="post" action="{% url 'equipment:category_delete' item.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"
+                      onclick="return confirm('Delete category &quot;{{ item.name }}&quot;?')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <tr class="cat-detail-row">
+              <td colspan="9" class="p-0 border-0">
+                <div class="collapse cat-equipment-panel" id="cat-equipment-{{ item.pk }}">
+                  <div class="cat-nested-wrap">
+                    {% if item.prefetched_items %}
+                    <div class="card cat-nested-card mb-3">
+                      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                          <span>Article/Item list</span>
+                          <span class="card-subtitle">Catalog names used when registering equipment under this category</span>
+                        </div>
+                        <span class="cat-count-chip">{{ item.item_count }} shown</span>
+                      </div>
+                      <div class="card-body p-0">
+                        <div class="table-responsive">
+                          <table class="table table-hover mb-0 cat-table">
+                            <thead>
+                              <tr>
+                                <th style="width:72px;">#</th>
+                                <th>Article/Item Name</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for catalog_item in item.prefetched_items %}
+                              <tr>
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td><span class="cat-item-name-text">{{ catalog_item.name }}</span></td>
+                                <td>
+                                  {% if catalog_item.status == 'Active' %}
+                                  <span class="badge-soft badge-soft-success">Active</span>
+                                  {% else %}
+                                  <span class="badge-soft badge-soft-neutral">Inactive</span>
+                                  {% endif %}
+                                </td>
+                              </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="card cat-nested-card">
+                      <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                          <span>Equipment list</span>
+                          <span class="card-subtitle">Registered equipment under {{ item.code }} — {{ item.name }}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                          <span class="cat-count-chip">{{ item.equipment_count }} shown</span>
+                          {% if item.status == 'Active' %}
+                          <button type="button" class="btn btn-sm btn-primary btn-add-equipment"
+                            data-bs-toggle="modal" data-bs-target="#addCategoryEquipmentModal"
+                            data-id="{{ item.pk }}"
+                            data-name="{{ item.name }}"
+                            data-code="{{ item.code }}">
+                            <i class="bi bi-plus-lg me-1"></i>Add Equipment
+                          </button>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <div class="card-body p-0">
+                        {% if item.prefetched_equipment %}
+                        <div class="table-responsive">
+                          <table class="table table-hover mb-0 cat-table">
+                            <thead>
+                              <tr>
+                                <th style="width:72px;">#</th>
+                                <th>Property Number</th>
+                                <th>Article/Item Name</th>
+                                <th>Location</th>
+                                <th>Assigned To</th>
+                                <th>Status</th>
+                                <th class="text-end" style="width:120px;">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for eq in item.prefetched_equipment %}
+                              <tr>
+                                <td class="text-muted">{{ forloop.counter }}</td>
+                                <td><span class="cat-code">{{ eq.property_number }}</span></td>
+                                <td>
+                                  <a href="{% url 'equipment:detail' eq.pk %}" class="cat-item-name cat-item-name-link">
+                                    {{ eq.display_name }}
+                                  </a>
+                                </td>
+                                <td>{% if eq.department %}{{ eq.department.name }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                                <td>
+                                  {% if eq.assigned_user %}
+                                  {{ eq.assigned_user.get_full_name|default:eq.assigned_user.username }}
+                                  {% else %}
+                                  <span class="text-muted">Unassigned</span>
+                                  {% endif %}
+                                </td>
+                                <td>
+                                  {% if eq.property_status %}
+                                  <span class="badge-soft badge-soft-neutral">{{ eq.property_status.name }}</span>
+                                  {% else %}
+                                  <span class="text-muted">{{ eq.status }}</span>
+                                  {% endif %}
+                                </td>
+                                <td class="text-end text-nowrap">
+                                  <div class="cat-row-actions">
+                                    <a href="{% url 'equipment:detail' eq.pk %}" class="btn btn-sm btn-outline-primary" title="View details">
+                                      <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if request.user.is_admin or request.user.is_custodian %}
+                                    <a href="{% url 'equipment:edit' eq.pk %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                      <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                  </div>
+                                </td>
+                              </tr>
+                              {% endfor %}
+                            </tbody>
+                          </table>
+                        </div>
+                        {% else %}
+                        <div class="cat-empty">
+                          <i class="bi bi-inbox"></i>
+                          <p class="cat-empty-title">No equipment registered</p>
+                          <p class="cat-empty-text">Add equipment under this category to see it listed here.</p>
+                          {% if item.status == 'Active' %}
+                          <button type="button" class="btn btn-sm btn-primary btn-add-equipment"
+                            data-bs-toggle="modal" data-bs-target="#addCategoryEquipmentModal"
+                            data-id="{{ item.pk }}"
+                            data-name="{{ item.name }}"
+                            data-code="{{ item.code }}">
+                            <i class="bi bi-plus-lg me-1"></i>Add Equipment
+                          </button>
+                          {% endif %}
+                        </div>
+                        {% endif %}
+                      </div>
+                      {% if item.prefetched_equipment %}
+                      <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <span class="cat-page-meta text-muted small">
+                          Showing {{ item.equipment_count }} record{{ item.equipment_count|pluralize }} for {{ item.code }}
+                        </span>
+                        <a href="{% url 'equipment:list' %}?category={{ item.pk }}" class="btn btn-sm btn-outline-secondary">
+                          View in inventory
+                        </a>
+                      </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9">
+                <div class="cat-empty">
+                  <i class="bi bi-inbox"></i>
+                  <p class="cat-empty-title">No categories found</p>
+                  <p class="cat-empty-text">Try clearing search or add a new category.</p>
+                  <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+                    <i class="bi bi-plus-lg me-1"></i>Add Category
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if page_obj.paginator.count %}
+    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <span class="cat-page-meta text-muted small">
+        Showing {{ page_obj.start_index|default:0 }}–{{ page_obj.end_index|default:0 }} of {{ total_count }}
+      </span>
+      {% if page_obj.has_other_pages %}
+      <nav aria-label="Category pages">
+        <ul class="pagination mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}{% if search %}&search={{ search|urlencode }}{% endif %}">Previous</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+          <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}{% if search %}&search={{ search|urlencode }}{% endif %}">Next</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% include 'equipment/includes/category_equipment_modal.html' %}
+
+<div class="modal fade" id="addCategoryItemModal" tabindex="-1" aria-labelledby="addCategoryItemModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <form method="post" action="{% url 'equipment:item_create' %}" id="addCategoryItemForm">
+        {% csrf_token %}
+        <input type="hidden" name="category" id="addItemCategoryId" value="">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-600" id="addCategoryItemModalLabel">
+            <i class="bi bi-box-seam me-2"></i>Add Article/Item Name
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Category</label>
+            <input type="text" class="form-control" id="addItemCategoryLabel" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="addItemName">Article/Item Name *</label>
+            <input type="text" class="form-control text-uppercase" id="addItemName" name="name"
+                   placeholder="e.g. DESKTOP COMPUTER" required>
+          </div>
+          <div>
+            <label class="form-label" for="addItemStatus">Status</label>
+            <select class="form-select" id="addItemStatus" name="status">
+              <option value="Active" selected>Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Item
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <form method="post" action="{% url 'equipment:category_create' %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-600" id="addCategoryModalLabel">
+            <i class="bi bi-plus-circle me-2"></i>Add Category
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="addCategoryName">Name *</label>
+            <input type="text" class="form-control" id="addCategoryName" name="name"
+                   placeholder="e.g. Medical, Dental and Laboratory Equipment" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="addCategoryCode">Code *</label>
+            <input type="text" class="form-control" id="addCategoryCode" name="code"
+                   placeholder="e.g. 05-10" maxlength="20" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="addCategoryTypeCode">Property type code</label>
+            <input type="text" class="form-control" id="addCategoryTypeCode" name="property_type_code"
+                   placeholder="e.g. MO" maxlength="10">
+          </div>
+          <div>
+            <label class="form-label" for="addCategoryStatus">Status</label>
+            <select class="form-select" id="addCategoryStatus" name="status">
+              <option value="Active" selected>Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Category
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <form method="post" id="editCategoryForm" action="">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-600" id="editCategoryModalLabel">
+            <i class="bi bi-pencil-square me-2"></i>Edit Category
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="editCategoryName">Name *</label>
+            <input type="text" class="form-control" id="editCategoryName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="editCategoryCode">Code *</label>
+            <input type="text" class="form-control" id="editCategoryCode" name="code" maxlength="20" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="editCategoryTypeCode">Property type code</label>
+            <input type="text" class="form-control" id="editCategoryTypeCode" name="property_type_code" maxlength="10">
+          </div>
+          <div>
+            <label class="form-label" for="editCategoryStatus">Status</label>
+            <select class="form-select" id="editCategoryStatus" name="status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i>Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cat-filter-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748B;
+    margin-bottom: 0.35rem;
+  }
+  .cat-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 1.8fr) minmax(140px, 0.8fr) auto;
+    gap: 0.85rem 0.75rem;
+    align-items: end;
+  }
+  .cat-filter-form .form-control,
+  .cat-filter-form .form-select {
+    width: 100%;
+  }
+  @media (max-width: 767.98px) {
+    .cat-filter-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .cat-filter-form .filter-field-search,
+    .cat-filter-form .filter-field-actions {
+      grid-column: 1 / -1;
+    }
+    .cat-filter-form .filter-field-actions .d-flex {
+      justify-content: stretch;
+    }
+    .cat-filter-form .filter-field-actions .btn {
+      flex: 1;
+    }
+  }
+
+  .cat-count-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--brand-surface);
+    border: 1px solid var(--brand-surface-border);
+    border-radius: 999px;
+    padding: 0.25rem 0.7rem;
+  }
+  .cat-table tbody td {
+    color: #334155;
+    font-size: 0.875rem;
+  }
+  .cat-item-name {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .cat-item-name:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .cat-code {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 6px;
+    padding: 0.15rem 0.5rem;
+    letter-spacing: 0.02em;
+  }
+  .cat-row-actions {
+    display: inline-flex;
+    gap: 0.35rem;
+  }
+  .cat-equipment-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+  }
+  .cat-equipment-count-btn {
+    cursor: pointer;
+    color: var(--primary);
+    background: var(--brand-surface);
+    border-color: var(--brand-surface-border);
+  }
+  .cat-equipment-count-btn:hover {
+    color: var(--accent);
+  }
+  .cat-expand-btn {
+    color: #64748B;
+    line-height: 1;
+  }
+  .cat-expand-btn i {
+    transition: transform 0.15s ease;
+    font-size: 0.9rem;
+  }
+  .cat-expand-btn[aria-expanded="true"] i {
+    transform: rotate(90deg);
+  }
+  .cat-main-row:hover {
+    background: #F8FAFC;
+  }
+  .cat-nested-wrap {
+    padding: 0.85rem 0.85rem 1rem;
+    background: #F8FAFC;
+    border-top: 1px solid #EEF2F7;
+  }
+  .cat-nested-card {
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .cat-nested-card .card-header {
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+  .cat-item-name-text {
+    font-weight: 600;
+    color: #334155;
+  }
+  .cat-item-name-link {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: inherit;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .cat-item-name-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .cat-eq-category-banner {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+  }
+  .cat-empty {
+    text-align: center;
+    padding: 3.25rem 1.5rem;
+    color: #94A3B8;
+  }
+  .cat-empty i {
+    font-size: 2rem;
+    opacity: 0.55;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+  .cat-empty-title {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748B;
+  }
+  .cat-empty-text {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+  }
+  .cat-page-meta {
+    letter-spacing: 0.01em;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  document.querySelectorAll('.cat-equipment-panel').forEach(function (panel) {
+    panel.addEventListener('show.bs.collapse', function () {
+      const id = panel.id;
+      document.querySelectorAll('[data-bs-target="#' + id + '"]').forEach(function (btn) {
+        btn.setAttribute('aria-expanded', 'true');
+      });
+    });
+    panel.addEventListener('hide.bs.collapse', function () {
+      const id = panel.id;
+      document.querySelectorAll('[data-bs-target="#' + id + '"]').forEach(function (btn) {
+        btn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  });
+})();
+</script>
+<script>
+(function () {
+  const editForm = document.getElementById('editCategoryForm');
+  const editName = document.getElementById('editCategoryName');
+  const editCode = document.getElementById('editCategoryCode');
+  const editTypeCode = document.getElementById('editCategoryTypeCode');
+  const editStatus = document.getElementById('editCategoryStatus');
+  const editUrlTemplate = '{% url "equipment:category_edit" 0 %}';
+
+  document.querySelectorAll('.btn-edit-category').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const id = btn.getAttribute('data-id');
+      editForm.action = editUrlTemplate.replace('/0/', '/' + id + '/');
+      editName.value = btn.getAttribute('data-name') || '';
+      editCode.value = btn.getAttribute('data-code') || '';
+      editTypeCode.value = btn.getAttribute('data-property-type-code') || '';
+      editStatus.value = btn.getAttribute('data-status') || 'Active';
+    });
+  });
+
+  const addItemCategoryId = document.getElementById('addItemCategoryId');
+  const addItemCategoryLabel = document.getElementById('addItemCategoryLabel');
+  document.querySelectorAll('.btn-add-item').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      addItemCategoryId.value = btn.getAttribute('data-id') || '';
+      const name = btn.getAttribute('data-name') || '';
+      const code = btn.getAttribute('data-code') || '';
+      addItemCategoryLabel.value = code ? (code + ' — ' + name) : name;
+    });
+  });
+})();
+</script>
+<script>
+(function () {
+  const modalEl = document.getElementById('addCategoryEquipmentModal');
+  const formEl = document.getElementById('categoryEquipmentForm');
+  if (!modalEl || !formEl) return;
+
+  const createUrlTemplate = '{% url "equipment:category_equipment_create" 0 %}';
+  const categoryIdInput = document.getElementById('catEqCategoryId');
+  const categoryLabel = document.getElementById('catEqCategoryLabel');
+  const categoryCode = document.getElementById('catEqCategoryCode');
+  const propertyNumberInput = document.getElementById('catEqPropertyNumber');
+  const acquisitionCostInput = document.getElementById('catEqAcquisitionCost');
+  const purchaseCostInput = document.getElementById('catEqPurchaseCost');
+  const propertyNumberError = document.getElementById('catEqPropertyNumberError');
+  const purchaseDateInput = document.getElementById('catEqPurchaseDate');
+  const nameSelect = document.getElementById('catEqName');
+  const nameHint = document.getElementById('catEqNameHint');
+  const initialName = '{{ equipment_form.name.value|default_if_none:""|escapejs }}';
+  let propertyNumberTimer = null;
+  let propertyNumberRequest = 0;
+
+  function todayIso() {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return now.getFullYear() + '-' + month + '-' + day;
+  }
+
+  function setPropertyNumberError(message) {
+    if (!propertyNumberError) return;
+    if (message) {
+      propertyNumberError.textContent = message;
+      propertyNumberError.classList.remove('d-none');
+    } else {
+      propertyNumberError.textContent = '';
+      propertyNumberError.classList.add('d-none');
+    }
+  }
+
+  function syncPurchaseCost() {
+    if (acquisitionCostInput && purchaseCostInput) {
+      purchaseCostInput.value = acquisitionCostInput.value || '0';
+    }
+  }
+
+  function schedulePropertyNumberRefresh() {
+    clearTimeout(propertyNumberTimer);
+    propertyNumberTimer = setTimeout(refreshPropertyNumber, 200);
+  }
+
+  async function refreshPropertyNumber() {
+    syncPurchaseCost();
+    const requestId = ++propertyNumberRequest;
+    setPropertyNumberError('');
+
+    const params = new URLSearchParams({
+      acquisition_cost: acquisitionCostInput?.value || '0',
+      purchase_date: purchaseDateInput?.value || '',
+      fund_source: document.getElementById('catEqFundSource')?.value || '',
+      category: categoryIdInput?.value || '',
+      department: document.getElementById('catEqDepartment')?.value || '',
+    });
+
+    try {
+      const response = await fetch(
+        '{% url "equipment:property_number_generate" %}?' + params.toString(),
+        { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } },
+      );
+      const data = await response.json();
+      if (requestId !== propertyNumberRequest) {
+        return Boolean(propertyNumberInput?.value);
+      }
+      if (response.ok && data.success && data.property_number) {
+        propertyNumberInput.value = data.property_number;
+        return true;
+      }
+      setPropertyNumberError(data.error || 'Could not generate property number.');
+      return Boolean(propertyNumberInput?.value);
+    } catch (err) {
+      if (requestId === propertyNumberRequest) {
+        setPropertyNumberError('Could not reach the server to generate a property number.');
+      }
+      return Boolean(propertyNumberInput?.value);
+    }
+  }
+
+  async function loadItems(categoryId, selectedName) {
+    if (!nameSelect) return;
+    nameSelect.innerHTML = '<option value="">Loading…</option>';
+    if (nameHint) nameHint.textContent = 'Loading items for this category…';
+    try {
+      const params = new URLSearchParams({ category: categoryId });
+      const response = await fetch(
+        '{% url "equipment:item_list" %}?' + params.toString(),
+        { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } },
+      );
+      const data = await response.json();
+      nameSelect.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = (data.items || []).length
+        ? 'Select Article/Item Name'
+        : 'No items for this category';
+      nameSelect.appendChild(placeholder);
+      (data.items || []).forEach(function (item) {
+        const option = document.createElement('option');
+        option.value = item.name;
+        option.textContent = item.name;
+        if (selectedName && selectedName === item.name) option.selected = true;
+        nameSelect.appendChild(option);
+      });
+      if (nameHint) {
+        nameHint.textContent = (data.items || []).length
+          ? 'Showing items for this category.'
+          : 'No article/item names yet. Use the box icon to add one.';
+      }
+    } catch (err) {
+      nameSelect.innerHTML = '<option value="">Could not load items</option>';
+      if (nameHint) nameHint.textContent = 'Could not load article/item names.';
+    }
+  }
+
+  function openForCategory(id, name, code) {
+    formEl.action = createUrlTemplate.replace('/0/', '/' + id + '/');
+    categoryIdInput.value = id;
+    categoryLabel.textContent = name || '—';
+    categoryCode.textContent = code || '';
+    if (purchaseDateInput && !purchaseDateInput.value) {
+      purchaseDateInput.value = todayIso();
+    }
+    syncPurchaseCost();
+    refreshPropertyNumber();
+    loadItems(id, initialName);
+  }
+
+  document.querySelectorAll('.btn-add-equipment').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      openForCategory(
+        btn.getAttribute('data-id'),
+        btn.getAttribute('data-name'),
+        btn.getAttribute('data-code'),
+      );
+    });
+  });
+
+  ['catEqAcquisitionCost', 'catEqPurchaseDate', 'catEqFundSource', 'catEqDepartment'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', schedulePropertyNumberRefresh);
+      el.addEventListener('change', schedulePropertyNumberRefresh);
+    }
+  });
+
+  formEl.addEventListener('submit', async function (event) {
+    syncPurchaseCost();
+    if (!formEl.checkValidity()) {
+      event.preventDefault();
+      formEl.classList.add('was-validated');
+      return;
+    }
+    if (propertyNumberInput?.value) {
+      return;
+    }
+    event.preventDefault();
+    const ready = await refreshPropertyNumber();
+    if (ready && propertyNumberInput?.value) {
+      formEl.requestSubmit();
+    } else {
+      setPropertyNumberError(
+        'Property number is required. Select Fund Source, Location, and Date Acquired, then try again.',
+      );
+    }
+  });
+
+  {% if open_equipment_category %}
+  openForCategory(
+    '{{ open_equipment_category.pk }}',
+    '{{ open_equipment_category.name|escapejs }}',
+    '{{ open_equipment_category.code|escapejs }}',
+  );
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  {% endif %}
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+{{ block.super }}
+{% if download_database_url %}
+<li>
+  <a href="{{ download_database_url }}" class="historylink">
+    {% translate 'Import / export database' %}
+  </a>
+</li>
+{% endif %}
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .legacy-lgu-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0.25rem 0 0.75rem;
+  }
+  .legacy-lgu-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .legacy-lgu-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .legacy-lgu-toggle__track {
+    width: 52px;
+    height: 28px;
+    border-radius: 999px;
+    background: #c9cdd3;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+  }
+  .legacy-lgu-toggle__track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease;
+  }
+  .legacy-lgu-toggle input:checked + .legacy-lgu-toggle__track {
+    background: #0d6efd;
+  }
+  .legacy-lgu-toggle input:checked + .legacy-lgu-toggle__track::after {
+    transform: translateX(24px);
+  }
+  .legacy-lgu-toggle input:focus-visible + .legacy-lgu-toggle__track {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+  }
+  .legacy-lgu-toggle__status {
+    font-weight: 600;
+    min-width: 4.5rem;
+  }
+  .legacy-lgu-toggle__status.is-on { color: #0d6efd; }
+  .legacy-lgu-toggle__status.is-off { color: #6c757d; }
+  .legacy-lgu-format-hint {
+    color: #6c757d;
+    font-size: 0.92rem;
+    margin: 0;
+  }
+  .field-property_number_use_legacy_lgu_code > label,
+  .field-property_number_use_legacy_lgu_code .checkbox-row {
+    display: none;
+  }
+  .field-property_number_lgu_code.legacy-mode-active input {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+  }
+</style>
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script>
+(function () {
+  const checkbox = document.getElementById('id_property_number_use_legacy_lgu_code');
+  const codeRow = document.querySelector('.field-property_number_lgu_code');
+  const toggleField = document.querySelector('.field-property_number_use_legacy_lgu_code');
+  if (!checkbox || !toggleField) return;
+
+  const statusEl = document.createElement('span');
+  statusEl.className = 'legacy-lgu-toggle__status';
+
+  const hintEl = document.createElement('p');
+  hintEl.className = 'legacy-lgu-format-hint';
+
+  const label = document.createElement('label');
+  label.className = 'legacy-lgu-toggle';
+  const track = document.createElement('span');
+  track.className = 'legacy-lgu-toggle__track';
+  label.appendChild(checkbox);
+  label.appendChild(track);
+  label.appendChild(statusEl);
+
+  const row = document.createElement('div');
+  row.className = 'legacy-lgu-toggle-row';
+  row.appendChild(label);
+  row.appendChild(hintEl);
+  toggleField.appendChild(row);
+
+  function municipalityExample() {
+    const municipalityField = document.getElementById('id_lgu_municipality');
+    const name = municipalityField && municipalityField.value
+      ? municipalityField.value.trim().replace(/\b\w/g, function (c) { return c.toUpperCase(); })
+      : 'Sudipen';
+    return 'LGU-' + name;
+  }
+
+  function codeExample() {
+    const codeField = document.getElementById('id_property_number_lgu_code');
+    return codeField && codeField.value ? codeField.value.trim() : '0621';
+  }
+
+  function syncToggle() {
+    const enabled = checkbox.checked;
+    statusEl.textContent = enabled ? 'Enabled' : 'Disabled';
+    statusEl.className = 'legacy-lgu-toggle__status ' + (enabled ? 'is-on' : 'is-off');
+    if (enabled) {
+      hintEl.textContent = 'Property numbers: ' + codeExample() + '-201-2027-PR-0001';
+      if (codeRow) codeRow.classList.add('legacy-mode-active');
+    } else {
+      hintEl.textContent = 'Property numbers: ' + municipalityExample() + '-201-2027-PR-0001';
+      if (codeRow) codeRow.classList.remove('legacy-mode-active');
+    }
+  }
+
+  checkbox.addEventListener('change', syncToggle);
+  const codeField = document.getElementById('id_property_number_lgu_code');
+  const municipalityField = document.getElementById('id_lgu_municipality');
+  if (codeField) codeField.addEventListener('input', syncToggle);
+  if (municipalityField) municipalityField.addEventListener('input', syncToggle);
+  syncToggle();
+})();
+</script>
+{% endblock %}

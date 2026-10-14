@@ -1,0 +1,375 @@
+{% extends 'base.html' %}
+
+{% block title %}Suppliers{% endblock %}
+
+{% block content %}
+<div class="sup-page">
+  <div class="page-header d-flex align-items-start justify-content-between flex-wrap gap-3">
+    <div class="d-flex align-items-start">
+      <span class="page-icon"><i class="bi bi-truck"></i></span>
+      <div>
+        <h1>Suppliers</h1>
+        <div class="breadcrumb">
+          Equipment · {{ total_count }} supplier{{ total_count|pluralize }}
+        </div>
+      </div>
+    </div>
+    <div class="page-header-actions">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+        <i class="bi bi-plus-lg me-1"></i>Add Supplier
+      </button>
+    </div>
+  </div>
+
+  <div class="card mb-3 sup-filter-card">
+    <div class="card-body">
+      <form class="sup-filter-form" method="get">
+        <div class="sup-filter-grid">
+          <div class="filter-field filter-field-search">
+            <label class="sup-filter-label" for="sup-search">Search</label>
+            <input type="search" id="sup-search" name="search" class="form-control"
+                   placeholder="Search by name or address…" value="{{ search }}">
+          </div>
+          <div class="filter-field">
+            <label class="sup-filter-label" for="sup-per-page">Rows</label>
+            <select id="sup-per-page" name="per_page" class="form-select" onchange="this.form.submit()">
+              <option value="10" {% if per_page == 10 %}selected{% endif %}>10 per page</option>
+              <option value="20" {% if per_page == 20 %}selected{% endif %}>20 per page</option>
+              <option value="50" {% if per_page == 50 %}selected{% endif %}>50 per page</option>
+            </select>
+          </div>
+          <div class="filter-field filter-field-actions">
+            <span class="sup-filter-label d-none d-md-block">&nbsp;</span>
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-search me-1"></i>Search
+              </button>
+              {% if search %}
+              <a href="{% url 'equipment:supplier_list' %}" class="btn btn-outline-secondary">Clear</a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card sup-results-card">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <span>Supplier list</span>
+        <span class="card-subtitle">Vendors linked to equipment acquisitions and purchases</span>
+      </div>
+      <span class="sup-count-chip">{{ total_count }} shown</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 sup-table">
+          <thead>
+            <tr>
+              <th style="width:72px;">#</th>
+              <th>Name</th>
+              <th>Address</th>
+              <th>Status</th>
+              <th class="text-end" style="width:120px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in page_obj %}
+            <tr>
+              <td class="text-muted">{{ forloop.counter0|add:page_obj.start_index }}</td>
+              <td>
+                <button type="button"
+                        class="sup-item-name btn-edit-supplier"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editSupplierModal"
+                        data-id="{{ item.pk }}"
+                        data-name="{{ item.name }}"
+                        data-address="{{ item.address }}"
+                        data-status="{{ item.status }}">
+                  {{ item.name }}
+                </button>
+              </td>
+              <td>
+                <span class="sup-address">{{ item.address|default:"—" }}</span>
+              </td>
+              <td>
+                {% if item.status == 'Active' %}
+                <span class="badge-soft badge-soft-success">Active</span>
+                {% else %}
+                <span class="badge-soft badge-soft-neutral">Inactive</span>
+                {% endif %}
+              </td>
+              <td class="text-end text-nowrap">
+                <div class="sup-row-actions">
+                  <button type="button" class="btn btn-sm btn-outline-primary btn-edit-supplier" title="Edit"
+                    data-bs-toggle="modal" data-bs-target="#editSupplierModal"
+                    data-id="{{ item.pk }}"
+                    data-name="{{ item.name }}"
+                    data-address="{{ item.address }}"
+                    data-status="{{ item.status }}">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <form method="post" action="{% url 'equipment:supplier_delete' item.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"
+                      onclick="return confirm('Delete supplier &quot;{{ item.name }}&quot;?')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">
+                <div class="sup-empty">
+                  <i class="bi bi-inbox"></i>
+                  <p class="sup-empty-title">No suppliers found</p>
+                  <p class="sup-empty-text">Try clearing search or add a new supplier.</p>
+                  <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+                    <i class="bi bi-plus-lg me-1"></i>Add Supplier
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if page_obj.paginator.count %}
+    <div class="card-footer d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <span class="sup-page-meta text-muted small">
+        Showing {{ page_obj.start_index|default:0 }}–{{ page_obj.end_index|default:0 }} of {{ total_count }}
+      </span>
+      {% if page_obj.has_other_pages %}
+      <nav aria-label="Supplier pages">
+        <ul class="pagination mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}{% if search %}&search={{ search|urlencode }}{% endif %}">Previous</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+          <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}{% if search %}&search={{ search|urlencode }}{% endif %}">Next</a>
+          </li>
+          {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <form method="post" action="{% url 'equipment:supplier_create' %}">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-600" id="addSupplierModalLabel">
+            <i class="bi bi-plus-circle me-2"></i>Add Supplier
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="addSupplierName">Name *</label>
+            <input type="text" class="form-control" id="addSupplierName" name="name" placeholder="e.g. TechSource PH" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="addSupplierAddress">Address</label>
+            <input type="text" class="form-control" id="addSupplierAddress" name="address" placeholder="e.g. City of San Fernando, La Union">
+          </div>
+          <div>
+            <label class="form-label" for="addSupplierStatus">Status</label>
+            <select class="form-select" id="addSupplierStatus" name="status">
+              <option value="Active" selected>Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Add Supplier
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editSupplierModal" tabindex="-1" aria-labelledby="editSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <form method="post" id="editSupplierForm" action="">
+        {% csrf_token %}
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-600" id="editSupplierModalLabel">
+            <i class="bi bi-pencil-square me-2"></i>Edit Supplier
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label" for="editSupplierName">Name *</label>
+            <input type="text" class="form-control" id="editSupplierName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="editSupplierAddress">Address</label>
+            <input type="text" class="form-control" id="editSupplierAddress" name="address">
+          </div>
+          <div>
+            <label class="form-label" for="editSupplierStatus">Status</label>
+            <select class="form-select" id="editSupplierStatus" name="status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i>Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .sup-filter-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748B;
+    margin-bottom: 0.35rem;
+  }
+  .sup-filter-grid {
+    display: grid;
+    grid-template-columns: minmax(200px, 1.8fr) minmax(140px, 0.8fr) auto;
+    gap: 0.85rem 0.75rem;
+    align-items: end;
+  }
+  .sup-filter-form .form-control,
+  .sup-filter-form .form-select {
+    width: 100%;
+  }
+  @media (max-width: 767.98px) {
+    .sup-filter-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .sup-filter-form .filter-field-search,
+    .sup-filter-form .filter-field-actions {
+      grid-column: 1 / -1;
+    }
+    .sup-filter-form .filter-field-actions .d-flex {
+      justify-content: stretch;
+    }
+    .sup-filter-form .filter-field-actions .btn {
+      flex: 1;
+    }
+  }
+
+  .sup-count-chip {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary);
+    background: var(--brand-surface);
+    border: 1px solid var(--brand-surface-border);
+    border-radius: 999px;
+    padding: 0.25rem 0.7rem;
+  }
+  .sup-table tbody td {
+    color: #334155;
+    font-size: 0.875rem;
+  }
+  .sup-item-name {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .sup-item-name:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+  .sup-address {
+    color: #64748B;
+    font-size: 0.875rem;
+  }
+  .sup-row-actions {
+    display: inline-flex;
+    gap: 0.35rem;
+  }
+  .sup-empty {
+    text-align: center;
+    padding: 3.25rem 1.5rem;
+    color: #94A3B8;
+  }
+  .sup-empty i {
+    font-size: 2rem;
+    opacity: 0.55;
+    display: block;
+    margin-bottom: 0.75rem;
+  }
+  .sup-empty-title {
+    margin: 0 0 0.35rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748B;
+  }
+  .sup-empty-text {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+  }
+  .sup-page-meta {
+    letter-spacing: 0.01em;
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const editForm = document.getElementById('editSupplierForm');
+  const editName = document.getElementById('editSupplierName');
+  const editAddress = document.getElementById('editSupplierAddress');
+  const editStatus = document.getElementById('editSupplierStatus');
+  const editUrlTemplate = '{% url "equipment:supplier_edit" 0 %}';
+
+  document.querySelectorAll('.btn-edit-supplier').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const id = btn.getAttribute('data-id');
+      editForm.action = editUrlTemplate.replace('/0/', '/' + id + '/');
+      editName.value = btn.getAttribute('data-name') || '';
+      editAddress.value = btn.getAttribute('data-address') || '';
+      editStatus.value = btn.getAttribute('data-status') || 'Active';
+    });
+  });
+})();
+</script>
+{% endblock %}

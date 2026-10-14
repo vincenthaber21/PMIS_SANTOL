@@ -1,0 +1,950 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .db-export-hero {
+    background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 55%, #40916c 100%);
+    color: #f8fff9;
+    padding: 1.5rem 1.75rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+  }
+  .db-export-hero h1 {
+    margin: 0 0 0.4rem;
+    font-size: 1.45rem;
+    color: #fff;
+  }
+  .db-export-hero p {
+    margin: 0;
+    max-width: 44rem;
+    opacity: 0.92;
+    line-height: 1.45;
+  }
+  .db-section {
+    margin-bottom: 2rem;
+  }
+  .db-section h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.15rem;
+  }
+  .db-export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 0.75rem 0 0;
+  }
+  .db-export-actions .button,
+  .db-import-form .button {
+    padding: 0.65rem 1.15rem;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .db-export-actions .button-primary,
+  .db-import-form .button-primary {
+    background: #1b4332;
+    color: #fff;
+    border: none;
+  }
+  .db-export-actions .button-primary:hover,
+  .db-export-actions .button-primary:focus,
+  .db-import-form .button-primary:hover,
+  .db-import-form .button-primary:focus {
+    background: #081c15;
+  }
+  .db-export-actions .button-primary:disabled,
+  .db-import-form .button-primary:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+  .db-export-actions .button-secondary {
+    background: #fff;
+    color: #1b4332;
+    border: 1px solid #95d5b2;
+  }
+  .db-export-note {
+    background: #fff8e6;
+    border-left: 4px solid #e9c46a;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+    line-height: 1.45;
+    color: #3d2e00;
+  }
+  .db-export-note strong {
+    color: #2a2000;
+  }
+  .db-import-box {
+    background: #f8faf9 !important;
+    border: 1px solid #d8e2dc;
+    border-radius: 8px;
+    padding: 1.25rem 1.35rem;
+    color: #1a1a1a !important;
+    color-scheme: light;
+  }
+  .db-schedule-banner {
+    border-radius: 8px;
+    padding: 1.15rem 1.35rem;
+    border: 1px solid #95d5b2;
+    background: #eef8f1;
+    color: #1a1a1a;
+  }
+  .db-schedule-banner.is-off {
+    background: #fff8e6;
+    border-color: #e9c46a;
+  }
+  .db-schedule-banner p {
+    margin: 0 0 0.35rem;
+    line-height: 1.45;
+  }
+  .db-schedule-banner p:last-child {
+    margin-bottom: 0;
+  }
+  .db-schedule-status {
+    font-size: 1.05rem;
+  }
+  .db-schedule-next .db-days-left {
+    font-size: 1.6rem;
+    color: #1b4332;
+    font-weight: 700;
+  }
+  .db-schedule-banner .quiet,
+  .db-schedule-last {
+    color: #44554c !important;
+    font-size: 0.92rem;
+  }
+  .db-schedule-banner a {
+    color: #1b4332;
+    font-weight: 600;
+  }
+  .db-import-form .form-row {
+    margin-bottom: 1rem;
+  }
+  .db-import-form label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+    color: #1a1a1a;
+  }
+  .db-import-form select,
+  .db-import-form input[type="text"],
+  .db-import-form input[type="file"],
+  .db-import-form input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]) {
+    display: block;
+    min-width: 10rem;
+    max-width: 100%;
+    padding: 0.45rem 0.6rem;
+    color: #111 !important;
+    background: #fff !important;
+    border: 1px solid #95a5a0 !important;
+    border-radius: 4px;
+    box-shadow: none;
+    -webkit-text-fill-color: #111;
+    color-scheme: light;
+  }
+  .db-import-form select option {
+    color: #111;
+    background: #fff;
+  }
+  .db-import-form input::placeholder {
+    color: #66706c !important;
+    opacity: 1;
+  }
+  .db-import-form input::-webkit-input-placeholder {
+    color: #66706c !important;
+  }
+  .db-import-form input::-moz-placeholder {
+    color: #66706c !important;
+    opacity: 1;
+  }
+  .db-import-form .help {
+    color: #444;
+    font-size: 0.9rem;
+    margin: 0.35rem 0 0;
+  }
+  .db-import-form .help code {
+    color: #1a1a1a;
+    background: #e8eee9;
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+  }
+  .db-export-stats caption {
+    text-align: left;
+    font-weight: 600;
+    padding: 0.5rem 0;
+  }
+  .db-export-stats .total-row th,
+  .db-export-stats .total-row td {
+    font-weight: 700;
+    border-top: 2px solid #bbb;
+  }
+  .db-export-apps {
+    margin: 0 0 1rem;
+    color: var(--body-quiet-color, #666);
+  }
+  .db-export-apps strong {
+    color: var(--body-fg, inherit);
+  }
+
+  /* Import loading overlay */
+  .db-import-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 28, 21, 0.55);
+    padding: 1.25rem;
+  }
+  .db-import-overlay.is-open {
+    display: flex;
+  }
+  .db-import-panel {
+    width: min(440px, 100%);
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
+    padding: 1.5rem 1.6rem 1.35rem;
+    color: #1a1a1a;
+  }
+  .db-import-panel h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.2rem;
+    color: #1b4332;
+  }
+  .db-import-panel .db-file-meta {
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    color: #444;
+    word-break: break-all;
+  }
+  .db-import-spinner {
+    width: 42px;
+    height: 42px;
+    margin: 0 auto 1rem;
+    border: 3px solid #d8e2dc;
+    border-top-color: #1b4332;
+    border-radius: 50%;
+    animation: db-spin 0.8s linear infinite;
+  }
+  .db-import-panel.is-done .db-import-spinner,
+  .db-import-panel.is-error .db-import-spinner {
+    display: none;
+  }
+  @keyframes db-spin {
+    to { transform: rotate(360deg); }
+  }
+  .db-import-progress {
+    height: 8px;
+    background: #e8eee9;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .db-import-progress-bar {
+    height: 100%;
+    width: 8%;
+    background: linear-gradient(90deg, #2d6a4f, #40916c);
+    border-radius: 999px;
+    transition: width 0.45s ease;
+  }
+  .db-import-panel.is-error .db-import-progress-bar {
+    background: #c1121f;
+  }
+  .db-import-panel.is-done .db-import-progress-bar {
+    background: #1b4332;
+    width: 100% !important;
+  }
+  .db-import-status {
+    margin: 0 0 0.85rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1b4332;
+    min-height: 1.4em;
+  }
+  .db-import-panel.is-error .db-import-status {
+    color: #9b1c1c;
+  }
+  .db-import-panel.is-done .db-import-status {
+    color: #1b4332;
+  }
+  .db-import-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.88rem;
+  }
+  .db-import-steps li {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    padding: 0.35rem 0;
+    color: #888;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .db-import-steps li:last-child {
+    border-bottom: none;
+  }
+  .db-import-steps .step-mark {
+    flex: 0 0 1.1rem;
+    text-align: center;
+    font-weight: 700;
+  }
+  .db-import-steps li.is-active {
+    color: #1b4332;
+    font-weight: 600;
+  }
+  .db-import-steps li.is-done {
+    color: #2d6a4f;
+  }
+  .db-import-steps li.is-error {
+    color: #9b1c1c;
+    font-weight: 600;
+  }
+  .db-import-steps li.is-active .step-mark::before { content: "●"; }
+  .db-import-steps li.is-done .step-mark::before { content: "✓"; }
+  .db-import-steps li.is-pending .step-mark::before { content: "○"; }
+  .db-import-steps li.is-error .step-mark::before { content: "!"; }
+  .db-import-result {
+    display: none;
+    margin-top: 0.9rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .db-import-result.is-visible {
+    display: block;
+  }
+  .db-import-result.is-ok {
+    background: #eef8f1;
+    border: 1px solid #95d5b2;
+    color: #1b4332;
+  }
+  .db-import-result.is-fail {
+    background: #fff5f5;
+    border: 1px solid #f1aeb5;
+    color: #7a0f0f;
+  }
+  .db-import-overlay-actions {
+    display: none;
+    margin-top: 1rem;
+    gap: 0.5rem;
+  }
+  .db-import-panel.is-done .db-import-overlay-actions,
+  .db-import-panel.is-error .db-import-overlay-actions {
+    display: flex;
+  }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; {% translate 'Database import / export' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="db-export-hero">
+  <h1>{% translate 'Database import / export' %}</h1>
+  <p>
+    Back up all PMS records, or restore from a previous JSON/ZIP export.
+    Covers users, equipment, PAR/ICS, borrowing, maintenance, reports, and site settings.
+  </p>
+</div>
+
+<div class="db-export-note">
+  <strong>Confidential:</strong> export files include user password hashes.
+  Store them securely. Uploaded media (logos, avatars, QR images) are not included.
+</div>
+
+<p class="db-export-apps">
+  <strong>Included apps:</strong>
+  {% for app in export_apps %}{{ app }}{% if not forloop.last %}, {% endif %}{% endfor %}
+</p>
+
+<div class="db-section">
+  <h2>{% translate 'Automatic download schedule' %}</h2>
+  <div class="db-schedule-banner{% if schedule.is_enabled %} is-on{% else %} is-off{% endif %}">
+    {% if schedule.is_enabled %}
+    <p class="db-schedule-status">Automatic download is <strong>ON</strong></p>
+    <p class="db-schedule-when">
+      Countdown:
+      <strong>{{ schedule.countdown_days }} days</strong>
+      starting
+      <strong>{{ schedule.start_date|date:"F j, Y" }}</strong>
+    </p>
+    <p class="db-schedule-next">
+      Days left:
+      <strong class="db-days-left">{{ days_remaining }}</strong>
+      {% if days_remaining == 0 %}
+      — <strong>due now</strong> (automatic download)
+      {% else %}
+      — automatic download on
+      <strong>{{ target_date|date:"F j, Y" }}</strong>
+      {% endif %}
+    </p>
+    {% else %}
+    <p class="db-schedule-status">Automatic download is <strong>OFF</strong></p>
+    <p class="db-schedule-when">
+      Saved countdown:
+      <strong>{{ schedule.countdown_days }} days</strong>
+      {% if schedule.start_date %}
+      from {{ schedule.start_date|date:"F j, Y" }}
+      ({{ days_remaining }} left)
+      {% endif %}
+      — turn ON below to activate.
+    </p>
+    {% endif %}
+    {% if schedule.last_run_at %}
+    <p class="db-schedule-last quiet">
+      Last automatic run: {{ schedule.last_run_at|date:"F j, Y H:i" }}
+      {% if schedule.last_download %}
+      —
+      <a href="{% url 'admin:download_database_saved_file' schedule.last_download_id %}">
+        download file
+      </a>
+      {% endif %}
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="db-import-box" style="margin-top:1rem;">
+    <form
+      class="db-import-form"
+      method="post"
+      action="{{ schedule_url }}"
+      id="db-schedule-form"
+    >
+      {% csrf_token %}
+      <div class="form-row" style="display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;">
+        <div>
+          <label for="id_countdown_days">{% translate 'Days until auto download' %}</label>
+          <input
+            type="number"
+            name="countdown_days"
+            id="id_countdown_days"
+            min="1"
+            max="3650"
+            step="1"
+            required
+            value="{{ schedule.countdown_days }}"
+            style="width:8rem;"
+          >
+        </div>
+        <div>
+          <label for="id_sched_enabled">{% translate 'Status' %}</label>
+          <select name="is_enabled" id="id_sched_enabled">
+            <option value="1"{% if schedule.is_enabled %} selected{% endif %}>ON — auto download</option>
+            <option value="0"{% if not schedule.is_enabled %} selected{% endif %}>OFF</option>
+          </select>
+        </div>
+        <div>
+          <label for="id_restart_countdown">{% translate 'Start counting' %}</label>
+          <select name="restart_countdown" id="id_restart_countdown">
+            <option value="1" selected>From today (restart)</option>
+            <option value="0">Keep current start date</option>
+          </select>
+        </div>
+      </div>
+      <p class="help" style="margin:0.75rem 0 0;">
+        Example: set <strong>100</strong> days starting today — the counter goes
+        100 → 99 → … → 0. When it reaches <strong>0</strong>, PMS automatically
+        saves a full ZIP (and restarts the same countdown).
+      </p>
+      <div class="db-export-actions">
+        <button type="submit" class="button button-primary">
+          Save day countdown
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="db-section">
+  <h2>{% translate 'Quarterly backup — download all data' %}</h2>
+  <p class="db-export-apps" style="margin-bottom:0.75rem;">
+    Choose the <strong>year</strong> and <strong>quarter</strong>, then click
+    download. PMS saves the backup and automatically downloads a full ZIP of all data.
+  </p>
+  <div class="db-import-box">
+    <form
+      class="db-import-form"
+      method="post"
+      action="{{ quarter_url }}"
+      id="db-quarter-form"
+    >
+      {% csrf_token %}
+      <div class="form-row" style="display:flex;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <label for="id_year">{% translate 'Year' %}</label>
+          <select name="year" id="id_year" required>
+            {% for y in year_choices %}
+            <option value="{{ y }}"{% if y == default_year %} selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label for="id_quarter">{% translate 'Quarter' %}</label>
+          <select name="quarter" id="id_quarter" required>
+            {% for value, label in quarter_choices %}
+            <option value="{{ value }}"{% if value == default_quarter %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="flex:1 1 12rem;min-width:10rem;">
+          <label for="id_quarter_notes">{% translate 'Notes (optional)' %}</label>
+          <input
+            type="text"
+            name="notes"
+            id="id_quarter_notes"
+            maxlength="255"
+            placeholder="e.g. End of Q2 inventory backup"
+            style="width:100%;"
+          >
+        </div>
+      </div>
+      <div class="db-export-actions">
+        <button type="submit" class="button button-primary" id="db-quarter-submit">
+          Download all data for this quarter
+        </button>
+        <a class="button button-secondary" href="{{ history_url }}">
+          View all downloads
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="db-section">
+  <h2>{% translate 'Quarterly backups' %}</h2>
+  <div class="module">
+    <table class="db-export-stats">
+      <thead>
+        <tr>
+          <th>{% translate 'Quarter' %}</th>
+          <th>{% translate 'Created' %}</th>
+          <th>{% translate 'File' %}</th>
+          <th>{% translate 'Size' %}</th>
+          <th>{% translate 'Objects' %}</th>
+          <th>{% translate 'By' %}</th>
+          <th>{% translate 'Action' %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in quarterly_backups %}
+        <tr>
+          <td><strong>{{ item.label }}</strong><br><span class="quiet">{{ item.quarter_display }}</span></td>
+          <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
+          <td>{% if item.download %}{{ item.download.filename }}{% else %}—{% endif %}</td>
+          <td>{% if item.download %}{{ item.download.file_size_display }}{% else %}—{% endif %}</td>
+          <td>{% if item.download %}{{ item.download.object_count }}{% else %}—{% endif %}</td>
+          <td>{% firstof item.created_by.get_username "—" %}</td>
+          <td>
+            {% if item.download %}
+            <a href="{% url 'admin:download_database_saved_file' item.download.pk %}">
+              Download again
+            </a>
+            {% else %}
+            —
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">{% translate 'No quarterly backups yet. Select a quarter above to create the first one.' %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="db-section">
+  <h2>{% translate 'Quick export (no quarter)' %}</h2>
+  <p class="db-export-apps" id="db-auto-status" style="margin-bottom:0.75rem;">
+    Download without tagging a quarter, or
+    <a href="?auto=1">auto-download ZIP once</a> for this visit.
+  </p>
+  <div class="db-export-actions">
+    <a class="button button-primary" href="{{ zip_url }}" id="db-download-zip">
+      Download ZIP
+    </a>
+    <a class="button button-secondary" href="{{ json_url }}">
+      Download JSON
+    </a>
+  </div>
+</div>
+
+<div class="db-section">
+  <h2>{% translate 'Recent downloads' %}</h2>
+  <div class="module">
+    <table class="db-export-stats">
+      <thead>
+        <tr>
+          <th>{% translate 'Date' %}</th>
+          <th>{% translate 'Quarter' %}</th>
+          <th>{% translate 'File' %}</th>
+          <th>{% translate 'Format' %}</th>
+          <th>{% translate 'Size' %}</th>
+          <th>{% translate 'Objects' %}</th>
+          <th>{% translate 'By' %}</th>
+          <th>{% translate 'Action' %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in recent_downloads %}
+        <tr>
+          <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
+          <td>{% firstof item.quarter_label "—" %}</td>
+          <td>{{ item.filename }}</td>
+          <td>{{ item.export_format|upper }}</td>
+          <td>{{ item.file_size_display }}</td>
+          <td>{{ item.object_count }}</td>
+          <td>{% firstof item.created_by.get_username "—" %}</td>
+          <td>
+            <a href="{% url 'admin:download_database_saved_file' item.pk %}">
+              Download again
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8">{% translate 'No downloads yet. Create a quarterly backup above.' %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if recent_downloads %}
+  <p style="margin-top:0.75rem;">
+    <a href="{{ history_url }}">{% translate 'View full download history' %} →</a>
+  </p>
+  {% endif %}
+</div>
+
+<div class="db-section">
+  <h2>{% translate 'Import — add / update data' %}</h2>
+  <div class="db-export-note">
+    <strong>Merge only:</strong> import adds new records and updates matching
+    non-user rows. <strong>Existing users are never deleted or overwritten</strong>
+    — only brand-new users from the file are added.
+  </div>
+  <div class="db-import-box">
+    <form
+      class="db-import-form"
+      method="post"
+      action="{{ import_url }}"
+      enctype="multipart/form-data"
+      id="db-import-form"
+    >
+      {% csrf_token %}
+      <input type="hidden" name="ajax" value="1">
+      <div class="form-row">
+        <label for="id_fixture_file">{% translate 'Fixture file (.json or .zip)' %}</label>
+        <input
+          type="file"
+          name="fixture_file"
+          id="id_fixture_file"
+          accept=".json,.zip,application/json,application/zip"
+          required
+        >
+        <p class="help">
+          Use a file created by the Export buttons above (or Django <code>dumpdata</code>).
+        </p>
+      </div>
+      <div class="db-export-actions">
+        <button type="submit" class="button button-primary" id="db-import-submit">
+          Import data
+        </button>
+        <a class="button" href="{% url 'admin:index' %}">
+          Back to admin home
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="module">
+  <table class="db-export-stats">
+    <caption>
+      {% translate 'Current record counts' %}
+      — {{ total_rows }} {% translate 'total rows' %}
+    </caption>
+    <thead>
+      <tr>
+        <th>{% translate 'App' %}</th>
+        <th>{% translate 'Table' %}</th>
+        <th>{% translate 'Records' %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in stats %}
+      <tr>
+        <td>{{ row.app }}</td>
+        <td>{{ row.label }}</td>
+        <td>{{ row.count }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="3">{% translate 'No models found.' %}</td>
+      </tr>
+      {% endfor %}
+      <tr class="total-row">
+        <th colspan="2">{% translate 'Total' %}</th>
+        <td>{{ total_rows }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div
+  class="db-import-overlay"
+  id="db-import-overlay"
+  hidden
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="db-import-title"
+>
+  <div class="db-import-panel" id="db-import-panel">
+    <div class="db-import-spinner" aria-hidden="true"></div>
+    <h2 id="db-import-title">Importing database…</h2>
+    <p class="db-file-meta" id="db-import-file-meta"></p>
+    <div class="db-import-progress" aria-hidden="true">
+      <div class="db-import-progress-bar" id="db-import-progress-bar"></div>
+    </div>
+    <p class="db-import-status" id="db-import-status">Preparing upload…</p>
+    <ol class="db-import-steps" id="db-import-steps">
+      <li data-step="upload" class="is-pending"><span class="step-mark"></span><span>Upload fixture file</span></li>
+      <li data-step="validate" class="is-pending"><span class="step-mark"></span><span>Validate JSON structure</span></li>
+      <li data-step="users" class="is-pending"><span class="step-mark"></span><span>Keep existing users / remap links</span></li>
+      <li data-step="merge" class="is-pending"><span class="step-mark"></span><span>Merge unique records</span></li>
+      <li data-step="load" class="is-pending"><span class="step-mark"></span><span>Load data into database</span></li>
+      <li data-step="done" class="is-pending"><span class="step-mark"></span><span>Finish</span></li>
+    </ol>
+    <div class="db-import-result" id="db-import-result"></div>
+    <div class="db-import-overlay-actions">
+      <button type="button" class="button button-primary" id="db-import-reload">Refresh page</button>
+      <button type="button" class="button" id="db-import-close">Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block footer %}
+{{ block.super }}
+<script>
+(function () {
+  // Auto-download ZIP when requested (?auto=1) or when schedule just ran.
+  {% if auto_download %}
+  try {
+    var forceSched = {% if scheduled_download_ready %}true{% else %}false{% endif %};
+    var key = 'pms_db_auto_zip_' + (window.location.pathname || '');
+    if (forceSched || !sessionStorage.getItem(key)) {
+      if (!forceSched) sessionStorage.setItem(key, '1');
+      var status = document.getElementById('db-auto-status');
+      if (status) {
+        status.textContent = forceSched
+          ? 'Scheduled backup is ready — downloading ZIP…'
+          : 'Preparing automatic ZIP download…';
+      }
+      var frame = document.createElement('iframe');
+      frame.style.display = 'none';
+      frame.src = '{{ zip_url }}';
+      document.body.appendChild(frame);
+      setTimeout(function () {
+        if (status) {
+          status.innerHTML =
+            'ZIP download started. A copy was saved to ' +
+            '<a href="{{ history_url }}">download history</a>.';
+        }
+      }, 1200);
+    }
+  } catch (e) {
+    // sessionStorage unavailable — fall back to immediate download
+    window.location.href = '{{ zip_url }}';
+  }
+  {% endif %}
+
+  var form = document.getElementById('db-import-form');
+  var fileInput = document.getElementById('id_fixture_file');
+  var submitBtn = document.getElementById('db-import-submit');
+  var overlay = document.getElementById('db-import-overlay');
+  var panel = document.getElementById('db-import-panel');
+  var statusEl = document.getElementById('db-import-status');
+  var metaEl = document.getElementById('db-import-file-meta');
+  var bar = document.getElementById('db-import-progress-bar');
+  var resultEl = document.getElementById('db-import-result');
+  var steps = Array.prototype.slice.call(
+    document.querySelectorAll('#db-import-steps [data-step]')
+  );
+  var reloadBtn = document.getElementById('db-import-reload');
+  var closeBtn = document.getElementById('db-import-close');
+
+  if (!form || !overlay) return;
+
+  var STEPS = ['upload', 'validate', 'users', 'merge', 'load', 'done'];
+  var STATUS_TEXT = {
+    upload: 'Uploading fixture to the server…',
+    validate: 'Validating fixture JSON…',
+    users: 'Preserving existing users and fixing user links…',
+    merge: 'Resolving unique-name conflicts…',
+    load: 'Writing records into the database…',
+    done: 'Import finished.'
+  };
+  var stepTimer = null;
+  var importing = false;
+
+  function formatBytes(n) {
+    if (!n && n !== 0) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function setStep(activeName, errored) {
+    var idx = STEPS.indexOf(activeName);
+    if (idx < 0) idx = 0;
+    steps.forEach(function (li, i) {
+      li.classList.remove('is-pending', 'is-active', 'is-done', 'is-error');
+      if (errored && i === idx) {
+        li.classList.add('is-error');
+      } else if (i < idx) {
+        li.classList.add('is-done');
+      } else if (i === idx) {
+        li.classList.add(errored ? 'is-error' : 'is-active');
+      } else {
+        li.classList.add('is-pending');
+      }
+    });
+    var pct = Math.max(8, Math.round(((idx + (errored ? 0.2 : 0.55)) / STEPS.length) * 100));
+    if (activeName === 'done' && !errored) pct = 100;
+    bar.style.width = pct + '%';
+    statusEl.textContent = errored
+      ? ('Failed during: ' + (STATUS_TEXT[activeName] || activeName))
+      : (STATUS_TEXT[activeName] || 'Working…');
+  }
+
+  function openOverlay(file) {
+    panel.classList.remove('is-done', 'is-error');
+    resultEl.className = 'db-import-result';
+    resultEl.textContent = '';
+    metaEl.textContent = file
+      ? ('File: ' + file.name + ' (' + formatBytes(file.size) + ')')
+      : '';
+    setStep('upload', false);
+    overlay.hidden = false;
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function finishOverlay(ok, message, stage) {
+    clearInterval(stepTimer);
+    stepTimer = null;
+    if (ok) {
+      setStep('done', false);
+      panel.classList.add('is-done');
+      statusEl.textContent = 'Import complete.';
+      resultEl.textContent = message || 'Data imported successfully.';
+      resultEl.className = 'db-import-result is-visible is-ok';
+    } else {
+      var failStage = stage && STEPS.indexOf(stage) >= 0 ? stage : 'load';
+      setStep(failStage, true);
+      panel.classList.add('is-error');
+      statusEl.textContent = 'Import failed — no changes were saved.';
+      resultEl.textContent = message || 'Unknown error.';
+      resultEl.className = 'db-import-result is-visible is-fail';
+    }
+    importing = false;
+    if (submitBtn) submitBtn.disabled = false;
+  }
+
+  function closeOverlay() {
+    if (importing) return;
+    overlay.classList.remove('is-open');
+    overlay.hidden = true;
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
+  function advanceWhileWaiting() {
+    var order = ['upload', 'validate', 'users', 'merge', 'load'];
+    var i = 0;
+    setStep(order[0], false);
+    stepTimer = setInterval(function () {
+      i = Math.min(i + 1, order.length - 1);
+      setStep(order[i], false);
+    }, 1600);
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (importing) return;
+
+    var file = fileInput && fileInput.files && fileInput.files[0];
+    if (!file) {
+      window.alert('Choose a .json or .zip file to import.');
+      return;
+    }
+
+    importing = true;
+    if (submitBtn) submitBtn.disabled = true;
+    openOverlay(file);
+    advanceWhileWaiting();
+
+    var data = new FormData(form);
+    data.set('ajax', '1');
+
+    fetch(form.action, {
+      method: 'POST',
+      body: data,
+      credentials: 'same-origin',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      }
+    })
+      .then(function (res) {
+        return res.json().then(function (body) {
+          return { status: res.status, body: body };
+        }).catch(function () {
+          return {
+            status: res.status,
+            body: {
+              ok: false,
+              message: 'Server returned a non-JSON response (HTTP ' + res.status + ').',
+              stage: 'load'
+            }
+          };
+        });
+      })
+      .then(function (result) {
+        var body = result.body || {};
+        finishOverlay(!!body.ok, body.message, body.stage);
+      })
+      .catch(function (err) {
+        finishOverlay(
+          false,
+          'Network or browser error: ' + (err && err.message ? err.message : err),
+          'upload'
+        );
+      });
+  });
+
+  if (reloadBtn) {
+    reloadBtn.addEventListener('click', function () {
+      window.location.reload();
+    });
+  }
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeOverlay);
+  }
+})();
+</script>
+{% endblock %}

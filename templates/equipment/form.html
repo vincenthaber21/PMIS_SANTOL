@@ -1,0 +1,1513 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-section {
+    background: #fff;
+    border: 1px solid #edf1f7;
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+  }
+  .form-section-title {
+    display: flex; align-items: center; gap: 0.6rem;
+    color: var(--primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f0f4f8;
+  }
+  .form-section-title i { color: var(--accent); font-size: 1.1rem; }
+
+  /* keep legacy alias working */
+  .property-info-section { background:#fff; border:1px solid #edf1f7; border-radius:14px; padding:1.5rem; }
+  .property-info-title { color: var(--primary); font-size:0.95rem; font-weight:700; margin-bottom:1.25rem; }
+
+  .form-section .form-label { font-weight: 600; color: #374151; }
+  .form-section .form-label .text-danger { margin-left: 2px; }
+  .form-section textarea.form-control { min-height: 110px; }
+
+  /* Professional checkbox rows for COA criteria */
+  .criteria-check {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: #f8fafc; border: 1px solid #edf1f7; border-radius: 10px;
+    padding: 0.65rem 0.85rem; margin-top: 0;
+  }
+  .criteria-check .form-check-input { margin: 0; float: none; cursor: pointer; }
+  .criteria-check .form-check-label { font-size: 0.82rem; color: #374151; cursor: pointer; margin: 0; }
+  .criteria-check .form-check-input:checked { background-color: #059669; border-color: #059669; }
+
+  /* Sticky-feel action bar */
+  .form-actions {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding-top: 1.25rem; margin-top: 0.25rem;
+    border-top: 1px solid #f0f4f8;
+  }
+
+  /* Property number collapsible panel */
+  .pn-panel {
+    background: #f8fafc;
+    border: 1px solid #e8eef5;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .pn-panel__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+  }
+  .pn-panel__toggle:hover { background: #f1f5f9; }
+  .pn-panel__toggle:focus-visible {
+    outline: 2px solid var(--primary, #1e3a5f);
+    outline-offset: -2px;
+  }
+  .pn-panel__toggle-main {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+  }
+  .pn-panel__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    color: var(--primary, #1e3a5f);
+    flex-shrink: 0;
+  }
+  .pn-panel__title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1f2937;
+    margin: 0;
+  }
+  .pn-panel__meta {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0.1rem 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pn-panel__meta code {
+    font-size: 0.78rem;
+    color: #0f172a;
+    background: #e2e8f0;
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+  }
+  .pn-panel__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+  .pn-panel__badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #0f766e;
+    background: #ccfbf1;
+    border: 1px solid #99f6e4;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+  }
+  .pn-panel__chevron {
+    color: #64748b;
+    transition: transform 0.2s ease;
+  }
+  .pn-panel.is-open .pn-panel__chevron { transform: rotate(180deg); }
+  .pn-panel__body {
+    display: none;
+    padding: 0 1rem 1rem;
+    border-top: 1px solid #e8eef5;
+  }
+  .pn-panel.is-open .pn-panel__body { display: block; padding-top: 0.85rem; }
+  .pn-panel__hint {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 0.5rem;
+  }
+  .pn-list--scroll {
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center">
+  <span class="page-icon"><i class="bi bi-pc-display"></i></span>
+  <div>
+    <h1>{{ title }}</h1>
+    <div class="breadcrumb"><a href="{% url 'equipment:list' %}">Equipment</a> / {{ title }}</div>
+  </div>
+</div>
+<form
+  method="post"
+  id="equipmentForm"
+  class="js-equipment-update-form"
+  novalidate
+  data-loading-title="{% if is_create %}Registering equipment{% else %}Updating equipment details{% endif %}"
+  data-loading-hint="Saving details, updating QR code, and redirecting to the equipment page."
+  data-loading-steps="Validating equipment details|Saving changes|Updating QR code|Redirecting">
+  {% csrf_token %}
+  {% if form.errors %}
+  <div class="alert alert-danger" role="alert">
+    <i class="bi bi-exclamation-triangle me-1"></i>
+    Please complete all required fields before saving.
+  </div>
+  {% endif %}
+      {{ form.purchase_cost }}
+
+      <div class="form-section">
+        <h2 class="form-section-title"><i class="bi bi-clipboard-data"></i>Property Information</h2>
+        <div class="row g-3">
+          <div class="col-12" id="propertyNumberFieldWrap">
+            <div class="pn-panel" id="propertyNumberPanel" data-open="false">
+              <button type="button" class="pn-panel__toggle" id="propertyNumberToggle"
+                      aria-expanded="false" aria-controls="propertyNumberBody">
+                <span class="pn-panel__toggle-main">
+                  <span class="pn-panel__icon" aria-hidden="true"><i class="bi bi-upc-scan"></i></span>
+                  <span>
+                    <span class="pn-panel__title">Property Number <span class="text-danger">*</span></span>
+                    <p class="pn-panel__meta" id="propertyNumberSummary">
+                      {% if is_create %}
+                      Auto-generated · hidden for a cleaner form — click to preview
+                      {% else %}
+                      <code id="propertyNumberSummaryCode">{{ form.property_number.value|default:equipment.property_number }}</code>
+                      {% endif %}
+                    </p>
+                  </span>
+                </span>
+                <span class="pn-panel__actions">
+                  <span class="pn-panel__badge" id="propertyNumberBadge">{% if is_create %}1 unit{% else %}Locked{% endif %}</span>
+                  <span class="pn-panel__chevron" aria-hidden="true"><i class="bi bi-chevron-down"></i></span>
+                </span>
+              </button>
+              <div class="pn-panel__body" id="propertyNumberBody" hidden>
+                {% if is_create %}
+                <div id="propertyNumbersList" class="row g-2">
+                  <div class="col-md-6 col-lg-4 property-number-unit" data-unit-index="1">
+                    <label class="form-label small text-muted mb-1" for="id_property_number">Unit 1</label>
+                    {{ form.property_number }}
+                  </div>
+                </div>
+                <div class="pn-panel__hint" id="propertyNumberHint">
+                  Each unit gets its own property number for individual accountability.
+                </div>
+                {% else %}
+                <label class="form-label visually-hidden" for="id_property_number">Property Number</label>
+                {{ form.property_number }}
+                {% endif %}
+                <div class="small mt-1 text-danger d-none" id="propertyNumberError"></div>
+                {% if form.property_number.errors %}<div class="text-danger small">{{ form.property_number.errors|join:", " }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Category <span class="text-danger">*</span></label>
+            <div class="input-group">
+              {{ form.category }}
+              {% if request.user.is_admin or request.user.is_custodian %}
+              <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal" title="Add category">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% if form.category.errors %}<div class="text-danger small">{{ form.category.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-5">
+            <label class="form-label" for="id_name">Article/Item Name <span class="text-danger">*</span></label>
+            <div class="input-group">
+              {{ form.name }}
+              {% if is_create %}
+              {% if request.user.is_admin or request.user.is_custodian %}
+              <button type="button" class="btn btn-outline-primary" id="btnAddEquipmentItem"
+                      data-bs-toggle="modal" data-bs-target="#addEquipmentItemModal"
+                      title="Add article/item name" disabled>
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              {% endif %}
+              {% endif %}
+            </div>
+            <div class="form-text" id="nameCategoryHint">Select a category first to load article/item names.</div>
+            {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Serial Number</label>
+            {{ form.serial_number }}
+            {% if form.serial_number.errors %}<div class="text-danger small">{{ form.serial_number.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Quantity <span class="text-danger">*</span></label>
+            {{ form.quantity }}
+            {% if is_create %}
+            <div class="form-text">Qty 2–500 creates separate property numbers per unit.</div>
+            {% endif %}
+            {% if form.quantity.errors %}<div class="text-danger small">{{ form.quantity.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Unit Measure <span class="text-danger">*</span></label>
+            {{ form.unit }}
+            {% if form.unit.errors %}<div class="text-danger small">{{ form.unit.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Unit Value <span class="text-danger">*</span></label>
+            {{ form.acquisition_cost }}
+            {% if form.acquisition_cost.errors %}<div class="text-danger small">{{ form.acquisition_cost.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Date Acquired <span class="text-danger">*</span></label>
+            {{ form.purchase_date }}
+            {% if form.purchase_date.errors %}<div class="text-danger small">{{ form.purchase_date.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Fund Source <span class="text-danger">*</span></label>
+            <div class="input-group">
+              {{ form.fund_source }}
+              {% if request.user.is_admin or request.user.is_custodian %}
+              <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addFundSourceModal" title="Add fund source">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% if form.fund_source.errors %}<div class="text-danger small">{{ form.fund_source.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Location <span class="text-danger">*</span></label>
+            <div class="input-group">
+              {{ form.department }}
+              {% if request.user.is_admin or request.user.is_custodian %}
+              <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal" title="Add location">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% if form.department.errors %}<div class="text-danger small">{{ form.department.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Supplier</label>
+            <div class="input-group">
+              {{ form.supplier }}
+              {% if request.user.is_admin or request.user.is_custodian %}
+              <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addSupplierModal" title="Add supplier">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% if form.supplier.errors %}<div class="text-danger small">{{ form.supplier.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Mode of Procurement</label>
+            <div class="input-group">
+              {{ form.mode_of_procurement }}
+              {% if request.user.is_admin or request.user.is_custodian %}
+              <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addProcurementModeModal" title="Add mode of procurement">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% if form.mode_of_procurement.errors %}<div class="text-danger small">{{ form.mode_of_procurement.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">P.O. Number</label>
+            {{ form.purchase_order_no }}
+            {% if form.purchase_order_no.errors %}<div class="text-danger small">{{ form.purchase_order_no.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Payment Method</label>
+            <div class="input-group">
+              {{ form.payment_method }}
+              {% if request.user.is_admin or request.user.is_custodian %}
+              <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addPaymentMethodModal" title="Add payment method">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% if form.payment_method.errors %}<div class="text-danger small">{{ form.payment_method.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Useful Life (in years)</label>
+            {{ form.estimated_useful_life }}
+            {% if form.estimated_useful_life.errors %}<div class="text-danger small">{{ form.estimated_useful_life.errors|join:", " }}</div>{% endif %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            {{ form.description }}
+            {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors|join:", " }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if is_create %}
+      <div class="form-section">
+        <h2 class="form-section-title"><i class="bi bi-person-badge"></i>Assignment</h2>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Assigned User</label>
+            {{ form.assigned_user }}
+          </div>
+          {{ form.property_status }}
+          <div class="col-md-6 d-flex align-items-end">
+            <div class="alert alert-light border py-2 mb-0 small w-100">
+              <i class="bi bi-info-circle me-1"></i>Property Status is set to <strong>Working</strong> automatically.
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-save me-1"></i>Save Equipment
+        </button>
+        <a href="{% url 'equipment:list' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+</form>
+
+{% if request.user.is_admin or request.user.is_custodian %}
+<div class="modal fade" id="addDepartmentModal" tabindex="-1" aria-labelledby="addDepartmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addDepartmentModalLabel">
+          <i class="bi bi-building me-2"></i>Add Office / Department
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="newDepartmentName">Office / Department name *</label>
+          <input type="text" class="form-control" id="newDepartmentName" placeholder="e.g. Office of the Mayor" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="newDepartmentCode">Department code *</label>
+          <input type="text" class="form-control" id="newDepartmentCode" placeholder="e.g. 1011" maxlength="20" required>
+        </div>
+        <div>
+          <label class="form-label" for="newDepartmentStatus">Status</label>
+          <select class="form-select" id="newDepartmentStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div id="departmentFormError" class="text-danger small mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveDepartmentBtn">
+          <i class="bi bi-plus-circle me-1"></i>Add Office / Department
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addCategoryModalLabel">
+          <i class="bi bi-tag me-2"></i>Add Category
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="newCategoryName">Category name *</label>
+          <input type="text" class="form-control" id="newCategoryName" placeholder="e.g. Medical, Dental and Laboratory Equipment" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="newCategoryCode">Category code *</label>
+          <input type="text" class="form-control" id="newCategoryCode" placeholder="e.g. 05-10" maxlength="20" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="newCategoryTypeCode">Property type code</label>
+          <input type="text" class="form-control" id="newCategoryTypeCode" placeholder="e.g. MO" maxlength="10">
+          <div class="form-text">Used in property numbers (e.g. MO for Office Equipment).</div>
+        </div>
+        <div>
+          <label class="form-label" for="newCategoryStatus">Status</label>
+          <select class="form-select" id="newCategoryStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div id="categoryFormError" class="text-danger small mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveCategoryBtn">
+          <i class="bi bi-plus-circle me-1"></i>Add Category
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% if is_create %}
+<div class="modal fade" id="addEquipmentItemModal" tabindex="-1" aria-labelledby="addEquipmentItemModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addEquipmentItemModalLabel">
+          <i class="bi bi-box-seam me-2"></i>Add Article/Item Name
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Category</label>
+          <input type="text" class="form-control" id="newItemCategoryLabel" readonly>
+          <input type="hidden" id="newItemCategoryId" value="">
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="newItemName">Article/Item Name *</label>
+          <input type="text" class="form-control text-uppercase" id="newItemName"
+                 placeholder="e.g. DESKTOP COMPUTER" required>
+        </div>
+        <div>
+          <label class="form-label" for="newItemStatus">Status</label>
+          <select class="form-select" id="newItemStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div id="equipmentItemFormError" class="text-danger small mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveEquipmentItemBtn">
+          <i class="bi bi-plus-circle me-1"></i>Add Item
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+<div class="modal fade" id="addFundSourceModal" tabindex="-1" aria-labelledby="addFundSourceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addFundSourceModalLabel">
+          <i class="bi bi-cash-stack me-2"></i>Add Fund Source
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="newFundSourceName">Name *</label>
+          <input type="text" class="form-control" id="newFundSourceName" placeholder="e.g. Fund 101" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="newFundSourceCode">Fund code *</label>
+          <input type="text" class="form-control" id="newFundSourceCode" placeholder="e.g. 01" maxlength="20" required>
+        </div>
+        <div>
+          <label class="form-label" for="newFundSourceStatus">Status</label>
+          <select class="form-select" id="newFundSourceStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div id="fundSourceFormError" class="text-danger small mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveFundSourceBtn">
+          <i class="bi bi-plus-circle me-1"></i>Add Fund Source
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="addProcurementModeModal" tabindex="-1" aria-labelledby="addProcurementModeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addProcurementModeModalLabel">
+          <i class="bi bi-cart-check me-2"></i>Add Mode of Procurement
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="newProcurementModeName">Name *</label>
+          <input type="text" class="form-control" id="newProcurementModeName" placeholder="e.g. Bidding" required>
+        </div>
+        <div>
+          <label class="form-label" for="newProcurementModeStatus">Status</label>
+          <select class="form-select" id="newProcurementModeStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div id="procurementModeFormError" class="text-danger small mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveProcurementModeBtn">
+          <i class="bi bi-plus-circle me-1"></i>Add Mode of Procurement
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="addPaymentMethodModal" tabindex="-1" aria-labelledby="addPaymentMethodModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addPaymentMethodModalLabel">
+          <i class="bi bi-credit-card me-2"></i>Add Payment Method
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="newPaymentMethodName">Name *</label>
+          <input type="text" class="form-control" id="newPaymentMethodName" placeholder="e.g. Cash" required>
+        </div>
+        <div>
+          <label class="form-label" for="newPaymentMethodStatus">Status</label>
+          <select class="form-select" id="newPaymentMethodStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div id="paymentMethodFormError" class="text-danger small mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="savePaymentMethodBtn">
+          <i class="bi bi-plus-circle me-1"></i>Add Payment Method
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="addSupplierModal" tabindex="-1" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-600" id="addSupplierModalLabel">
+          <i class="bi bi-truck me-2"></i>Add Supplier
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="newSupplierName">Supplier name *</label>
+          <input type="text" class="form-control" id="newSupplierName" placeholder="e.g. TechSource PH" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="newSupplierAddress">Address</label>
+          <input type="text" class="form-control" id="newSupplierAddress" placeholder="e.g. City of San Fernando, La Union">
+        </div>
+        <div>
+          <label class="form-label" for="newSupplierStatus">Status</label>
+          <select class="form-select" id="newSupplierStatus">
+            <option value="Active" selected>Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+        <div id="supplierFormError" class="text-danger small mt-2 d-none"></div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveSupplierBtn">
+          <i class="bi bi-plus-circle me-1"></i>Add Supplier
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% include 'equipment/includes/equipment_update_loading.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const equipmentForm = document.getElementById('equipmentForm');
+  if (equipmentForm) {
+    equipmentForm.addEventListener('submit', function (event) {
+      if (!equipmentForm.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+        equipmentForm.classList.add('was-validated');
+        const firstInvalid = equipmentForm.querySelector(':invalid');
+        if (firstInvalid) {
+          firstInvalid.focus();
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    });
+  }
+})();
+</script>
+<script>
+(function () {
+  const propertyNumberInput = document.getElementById('id_property_number');
+  const acquisitionCostInput = document.getElementById('id_acquisition_cost');
+  const purchaseCostInput = document.getElementById('id_purchase_cost');
+  const propertyNumberError = document.getElementById('propertyNumberError');
+  const propertyNumbersList = document.getElementById('propertyNumbersList');
+  const quantityInput = document.getElementById('id_quantity');
+  const equipmentForm = document.getElementById('equipmentForm');
+  const propertyNumberPanel = document.getElementById('propertyNumberPanel');
+  const propertyNumberToggle = document.getElementById('propertyNumberToggle');
+  const propertyNumberBody = document.getElementById('propertyNumberBody');
+  const propertyNumberSummary = document.getElementById('propertyNumberSummary');
+  const propertyNumberBadge = document.getElementById('propertyNumberBadge');
+  const isCreate = {{ is_create|yesno:"true,false" }};
+  if (!propertyNumberInput && !propertyNumberPanel) return;
+
+  const excludePk = "{{ equipment.pk|default_if_none:''|escapejs }}";
+  const currentPropertyNumber = "{{ equipment.property_number|default_if_none:''|escapejs }}";
+  let propertyNumberTimer = null;
+  let propertyNumberRequest = 0;
+  let latestPropertyNumbers = [];
+
+  function setPanelOpen(open) {
+    if (!propertyNumberPanel || !propertyNumberToggle || !propertyNumberBody) return;
+    propertyNumberPanel.classList.toggle('is-open', open);
+    propertyNumberPanel.dataset.open = open ? 'true' : 'false';
+    propertyNumberToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    propertyNumberBody.hidden = !open;
+  }
+
+  function updatePropertyNumberSummary(numbers) {
+    latestPropertyNumbers = Array.isArray(numbers) ? numbers.filter(Boolean) : [];
+    const count = Math.max(getQuantityCount(), latestPropertyNumbers.length || 1);
+    const first = latestPropertyNumbers[0] || primaryPropertyNumberInput()?.value || '';
+
+    if (propertyNumberBadge) {
+      if (isCreate) {
+        propertyNumberBadge.textContent = count === 1 ? '1 unit' : count + ' units';
+      } else {
+        propertyNumberBadge.textContent = 'Locked';
+      }
+    }
+
+    if (!propertyNumberSummary) return;
+    if (!first) {
+      propertyNumberSummary.innerHTML = isCreate
+        ? 'Auto-generated · fill Fund Source, Category, and Date Acquired'
+        : 'Property number unavailable';
+      return;
+    }
+
+    if (isCreate && count > 1) {
+      propertyNumberSummary.innerHTML =
+        '<code>' + first + '</code> … +' + (count - 1) + ' more · click to ' +
+        (propertyNumberPanel?.classList.contains('is-open') ? 'hide' : 'preview');
+    } else {
+      propertyNumberSummary.innerHTML =
+        '<code>' + first + '</code>' +
+        (isCreate ? ' · auto-generated · click to ' +
+          (propertyNumberPanel?.classList.contains('is-open') ? 'hide' : 'preview') : '');
+    }
+  }
+
+  if (propertyNumberToggle) {
+    propertyNumberToggle.addEventListener('click', function () {
+      const willOpen = !propertyNumberPanel.classList.contains('is-open');
+      setPanelOpen(willOpen);
+      updatePropertyNumberSummary(latestPropertyNumbers);
+    });
+  }
+
+  function setPropertyNumberError(message) {
+    if (!propertyNumberError) return;
+    if (message) {
+      propertyNumberError.textContent = message;
+      propertyNumberError.classList.remove('d-none');
+      setPanelOpen(true);
+    } else {
+      propertyNumberError.textContent = '';
+      propertyNumberError.classList.add('d-none');
+    }
+  }
+
+  function syncPurchaseCost() {
+    if (acquisitionCostInput && purchaseCostInput) {
+      purchaseCostInput.value = acquisitionCostInput.value || '0';
+    }
+  }
+
+  function getQuantityCount() {
+    if (!isCreate || !quantityInput) return 1;
+    const raw = parseInt(quantityInput.value, 10);
+    if (!Number.isFinite(raw) || raw < 1) return 1;
+    return Math.min(raw, 500);
+  }
+
+  function renderPropertyNumberFields(numbers) {
+    if (!isCreate || !propertyNumbersList) {
+      const primary = primaryPropertyNumberInput();
+      if (primary && numbers && numbers.length) {
+        primary.value = numbers[0];
+      }
+      updatePropertyNumberSummary(numbers || (primary ? [primary.value] : []));
+      return;
+    }
+
+    const count = Math.max(1, (numbers && numbers.length) || getQuantityCount());
+    const values = (numbers && numbers.length) ? numbers.slice() : [];
+    while (values.length < count) {
+      values.push('');
+    }
+
+    // Keep DOM light: preview a handful of units when quantity is large.
+    const previewLimit = 12;
+    const showAll = count <= previewLimit;
+    const previewCount = showAll ? count : Math.min(6, count);
+
+    propertyNumbersList.innerHTML = '';
+    propertyNumbersList.classList.toggle('pn-list--scroll', count > 6);
+
+    for (let i = 0; i < previewCount; i += 1) {
+      propertyNumbersList.appendChild(buildPropertyNumberUnit(i, count, values[i] || ''));
+    }
+
+    if (!showAll) {
+      const divider = document.createElement('div');
+      divider.className = 'col-12';
+      const lastNumber = values[count - 1] || '';
+      divider.innerHTML =
+        '<div class="pn-panel__hint mb-1">Showing first ' + previewCount +
+        ' of ' + count + ' units. Remaining numbers are assigned in sequence' +
+        (lastNumber ? ' through <code>' + lastNumber + '</code>' : '') +
+        ' on save.</div>';
+      propertyNumbersList.appendChild(divider);
+      if (lastNumber) {
+        propertyNumbersList.appendChild(
+          buildPropertyNumberUnit(count - 1, count, lastNumber, true),
+        );
+      }
+    }
+
+    updatePropertyNumberSummary(values);
+  }
+
+  function buildPropertyNumberUnit(index, count, value, isLast) {
+    const col = document.createElement('div');
+    col.className = 'col-md-6 col-lg-4 property-number-unit';
+    col.dataset.unitIndex = String(index + 1);
+
+    const label = document.createElement('label');
+    label.className = 'form-label small text-muted mb-1';
+    const inputId = index === 0 ? 'id_property_number' : `id_property_number_${index + 1}`;
+    label.setAttribute('for', inputId);
+    if (isLast && count > 1) {
+      label.textContent = `Unit ${count} (last)`;
+    } else {
+      label.textContent = count > 1 ? `Unit ${index + 1}` : 'Property Number';
+    }
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control';
+    input.readOnly = true;
+    input.value = value || '';
+    input.placeholder = 'PAR-000-0000-XX-0000';
+    input.id = inputId;
+    if (index === 0) {
+      input.name = 'property_number';
+      input.required = false;
+    } else {
+      input.name = `property_number_${index + 1}`;
+      input.tabIndex = -1;
+    }
+
+    col.appendChild(label);
+    col.appendChild(input);
+    return col;
+  }
+
+  function primaryPropertyNumberInput() {
+    return document.getElementById('id_property_number');
+  }
+
+  function schedulePropertyNumberRefresh() {
+    clearTimeout(propertyNumberTimer);
+    propertyNumberTimer = setTimeout(refreshPropertyNumber, 200);
+  }
+
+  async function refreshPropertyNumber() {
+    syncPurchaseCost();
+    const costEl = document.getElementById('id_acquisition_cost');
+    const dateEl = document.getElementById('id_purchase_date');
+    const fundEl = document.getElementById('id_fund_source');
+    const categoryEl = document.getElementById('id_category');
+    const departmentEl = document.getElementById('id_department');
+    const primaryInput = primaryPropertyNumberInput();
+    if (!costEl || !primaryInput) return false;
+
+    const requestId = ++propertyNumberRequest;
+    const count = getQuantityCount();
+    setPropertyNumberError('');
+
+    const params = new URLSearchParams({
+      acquisition_cost: costEl.value || '0',
+      purchase_date: dateEl?.value || '',
+      fund_source: fundEl?.value || '',
+      category: categoryEl?.value || '',
+      department: departmentEl?.value || '',
+      exclude_pk: excludePk,
+      current_property_number: isCreate ? '' : (currentPropertyNumber || primaryInput.value || ''),
+      count: String(count),
+    });
+
+    try {
+      const response = await fetch(
+        '{% url "equipment:property_number_generate" %}?' + params.toString(),
+        { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } },
+      );
+      const data = await response.json();
+      if (requestId !== propertyNumberRequest) {
+        return Boolean(primaryPropertyNumberInput()?.value);
+      }
+      if (response.ok && data.success && (data.property_numbers || data.property_number)) {
+        const numbers = data.property_numbers && data.property_numbers.length
+          ? data.property_numbers
+          : [data.property_number];
+        renderPropertyNumberFields(numbers);
+        return true;
+      }
+      setPropertyNumberError(data.error || 'Could not generate property number.');
+      return Boolean(primaryPropertyNumberInput()?.value);
+    } catch (err) {
+      if (requestId === propertyNumberRequest) {
+        setPropertyNumberError('Could not reach the server to generate a property number.');
+      }
+      return Boolean(primaryPropertyNumberInput()?.value);
+    }
+  }
+
+  if (acquisitionCostInput) {
+    acquisitionCostInput.addEventListener('input', function () {
+      syncPurchaseCost();
+      schedulePropertyNumberRefresh();
+    });
+    acquisitionCostInput.addEventListener('change', function () {
+      syncPurchaseCost();
+      schedulePropertyNumberRefresh();
+    });
+  }
+
+  [
+    'id_purchase_date',
+    'id_fund_source',
+    'id_category',
+    'id_department',
+  ].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', schedulePropertyNumberRefresh);
+      el.addEventListener('change', schedulePropertyNumberRefresh);
+    }
+  });
+
+  if (isCreate && quantityInput) {
+    quantityInput.setAttribute('min', '1');
+    quantityInput.setAttribute('max', '500');
+    quantityInput.addEventListener('input', function () {
+      renderPropertyNumberFields(
+        Array.from(
+          { length: getQuantityCount() },
+          function (_, index) {
+            const el = document.getElementById(
+              index === 0 ? 'id_property_number' : `id_property_number_${index + 1}`,
+            );
+            return el ? el.value : '';
+          },
+        ),
+      );
+      schedulePropertyNumberRefresh();
+    });
+    quantityInput.addEventListener('change', schedulePropertyNumberRefresh);
+  }
+
+  syncPurchaseCost();
+  setPanelOpen({% if form.property_number.errors %}true{% else %}false{% endif %});
+  if (isCreate) {
+    renderPropertyNumberFields([propertyNumberInput?.value || '']);
+  } else {
+    updatePropertyNumberSummary([propertyNumberInput?.value || currentPropertyNumber || '']);
+  }
+  refreshPropertyNumber();
+
+  if (equipmentForm) {
+    equipmentForm.addEventListener('submit', async function (event) {
+      const primaryInput = primaryPropertyNumberInput();
+      if (primaryInput && primaryInput.value) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const ready = await refreshPropertyNumber();
+      const updatedPrimary = primaryPropertyNumberInput();
+      if (ready && updatedPrimary && updatedPrimary.value) {
+        equipmentForm.requestSubmit();
+      } else {
+        setPropertyNumberError(
+          'Property number is required. Select Fund Source, Category, and Date Acquired, then try again.',
+        );
+        (updatedPrimary || propertyNumberInput)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
+})();
+</script>
+{% if is_create %}
+<script>
+(function () {
+  const categorySelect = document.getElementById('id_category');
+  const nameSelect = document.getElementById('id_name');
+  const hintEl = document.getElementById('nameCategoryHint');
+  const addItemBtn = document.getElementById('btnAddEquipmentItem');
+  if (!categorySelect || !nameSelect) return;
+
+  let loadRequest = 0;
+  const initialName = nameSelect.value || '';
+
+  function setHint(text) {
+    if (hintEl) hintEl.textContent = text || '';
+  }
+
+  function setAddItemEnabled(enabled) {
+    if (!addItemBtn) return;
+    addItemBtn.disabled = !enabled;
+  }
+
+  function fillNameOptions(items, selectedName) {
+    const previous = selectedName || '';
+    nameSelect.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = items.length
+      ? 'Select Article/Item Name'
+      : 'No items for this category';
+    nameSelect.appendChild(placeholder);
+
+    items.forEach(function (item) {
+      const option = document.createElement('option');
+      option.value = item.name;
+      option.textContent = item.name;
+      if (previous && previous === item.name) {
+        option.selected = true;
+      }
+      nameSelect.appendChild(option);
+    });
+
+    if (previous && !Array.from(nameSelect.options).some(function (opt) { return opt.value === previous; })) {
+      const orphan = document.createElement('option');
+      orphan.value = previous;
+      orphan.textContent = previous;
+      orphan.selected = true;
+      nameSelect.appendChild(orphan);
+    }
+
+    nameSelect.disabled = !categorySelect.value;
+  }
+
+  async function loadItemsForCategory(preserveName) {
+    const categoryId = categorySelect.value;
+    setAddItemEnabled(Boolean(categoryId));
+    if (!categoryId) {
+      fillNameOptions([], '');
+      setHint('Select a category first to load article/item names.');
+      return;
+    }
+
+    const requestId = ++loadRequest;
+    setHint('Loading article/item names…');
+    nameSelect.disabled = true;
+
+    try {
+      const params = new URLSearchParams({ category: categoryId });
+      const response = await fetch(
+        '{% url "equipment:item_list" %}?' + params.toString(),
+        { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } },
+      );
+      const data = await response.json();
+      if (requestId !== loadRequest) return;
+      if (!response.ok || !data.success) {
+        fillNameOptions([], '');
+        setHint(data.error || 'Could not load article/item names.');
+        return;
+      }
+      fillNameOptions(data.items || [], preserveName || '');
+      if ((data.items || []).length) {
+        setHint('Showing items for the selected category.');
+      } else {
+        setHint('No article/item names yet. Add one with the + button.');
+      }
+    } catch (err) {
+      if (requestId !== loadRequest) return;
+      fillNameOptions([], '');
+      setHint('Could not reach the server to load article/item names.');
+    }
+  }
+
+  categorySelect.addEventListener('change', function () {
+    loadItemsForCategory('');
+  });
+
+  window.reloadEquipmentItemOptions = function (selectedName) {
+    return loadItemsForCategory(selectedName || '');
+  };
+
+  if (categorySelect.value) {
+    loadItemsForCategory(initialName);
+  } else {
+    fillNameOptions([], '');
+    nameSelect.disabled = true;
+    setAddItemEnabled(false);
+  }
+})();
+</script>
+{% endif %}
+{% if request.user.is_admin or request.user.is_custodian %}
+<script>
+(function () {
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : '';
+  }
+
+  async function createOption(selectEl, url, body, modalEl, clearFields) {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCookie('csrftoken'),
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: new URLSearchParams(body),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Could not save.');
+    }
+
+    const option = document.createElement('option');
+    option.value = data.id;
+    option.textContent = data.name;
+    option.selected = true;
+    selectEl.appendChild(option);
+    selectEl.value = data.id;
+    selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+
+    clearFields();
+    bootstrap.Modal.getInstance(modalEl).hide();
+  }
+
+  const departmentSelect = document.getElementById('id_department');
+  const deptNameInput = document.getElementById('newDepartmentName');
+  const deptCodeInput = document.getElementById('newDepartmentCode');
+  const deptStatusInput = document.getElementById('newDepartmentStatus');
+  const deptErrorEl = document.getElementById('departmentFormError');
+  const saveDeptBtn = document.getElementById('saveDepartmentBtn');
+  const deptModalEl = document.getElementById('addDepartmentModal');
+
+  if (departmentSelect && saveDeptBtn) {
+    saveDeptBtn.addEventListener('click', async function () {
+      const name = deptNameInput.value.trim();
+      const code = deptCodeInput.value.trim();
+      const status = deptStatusInput.value;
+      deptErrorEl.classList.add('d-none');
+      if (!deptNameInput.checkValidity() || !name || !code) {
+        deptNameInput.reportValidity();
+        if (name && !code) {
+          deptCodeInput.reportValidity();
+        }
+        deptErrorEl.textContent = 'Please enter both office/department name and code.';
+        deptErrorEl.classList.remove('d-none');
+        return;
+      }
+
+      saveDeptBtn.disabled = true;
+      try {
+        await createOption(
+          departmentSelect,
+          '{% url "equipment:department_create" %}',
+          { name, code, status },
+          deptModalEl,
+          function () {
+            deptNameInput.value = '';
+            deptCodeInput.value = '';
+            deptStatusInput.value = 'Active';
+          }
+        );
+      } catch (err) {
+        deptErrorEl.textContent = err.message;
+        deptErrorEl.classList.remove('d-none');
+      } finally {
+        saveDeptBtn.disabled = false;
+      }
+    });
+
+    deptModalEl.addEventListener('hidden.bs.modal', function () {
+      deptNameInput.value = '';
+      deptCodeInput.value = '';
+      deptStatusInput.value = 'Active';
+      deptErrorEl.classList.add('d-none');
+    });
+  }
+
+  const categorySelect = document.getElementById('id_category');
+  const nameInput = document.getElementById('newCategoryName');
+  const codeInput = document.getElementById('newCategoryCode');
+  const typeCodeInput = document.getElementById('newCategoryTypeCode');
+  const statusInput = document.getElementById('newCategoryStatus');
+  const errorEl = document.getElementById('categoryFormError');
+  const saveBtn = document.getElementById('saveCategoryBtn');
+  const modalEl = document.getElementById('addCategoryModal');
+
+  if (categorySelect && saveBtn) {
+    saveBtn.addEventListener('click', async function () {
+      const name = nameInput.value.trim();
+      const code = codeInput.value.trim();
+      const property_type_code = typeCodeInput?.value.trim() || '';
+      const status = statusInput.value;
+      errorEl.classList.add('d-none');
+      if (!nameInput.checkValidity() || !name || !code) {
+        nameInput.reportValidity();
+        if (name && !code) {
+          codeInput.reportValidity();
+        }
+        errorEl.textContent = 'Please enter both category name and code.';
+        errorEl.classList.remove('d-none');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      try {
+        await createOption(
+          categorySelect,
+          '{% url "equipment:category_create" %}',
+          { name, code, property_type_code, status },
+          modalEl,
+          function () {
+            nameInput.value = '';
+            codeInput.value = '';
+            if (typeCodeInput) typeCodeInput.value = '';
+            statusInput.value = 'Active';
+          }
+        );
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.classList.remove('d-none');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    modalEl.addEventListener('hidden.bs.modal', function () {
+      nameInput.value = '';
+      codeInput.value = '';
+      if (typeCodeInput) typeCodeInput.value = '';
+      statusInput.value = 'Active';
+      errorEl.classList.add('d-none');
+    });
+  }
+
+  const itemNameSelect = document.getElementById('id_name');
+  const itemNameInput = document.getElementById('newItemName');
+  const itemCategoryIdInput = document.getElementById('newItemCategoryId');
+  const itemCategoryLabel = document.getElementById('newItemCategoryLabel');
+  const itemStatusInput = document.getElementById('newItemStatus');
+  const itemErrorEl = document.getElementById('equipmentItemFormError');
+  const saveItemBtn = document.getElementById('saveEquipmentItemBtn');
+  const itemModalEl = document.getElementById('addEquipmentItemModal');
+
+  if (categorySelect && itemModalEl && saveItemBtn) {
+    itemModalEl.addEventListener('show.bs.modal', function () {
+      const categoryId = categorySelect.value;
+      const selectedOption = categorySelect.options[categorySelect.selectedIndex];
+      itemCategoryIdInput.value = categoryId || '';
+      itemCategoryLabel.value = selectedOption ? selectedOption.textContent : '';
+      itemErrorEl.classList.add('d-none');
+    });
+
+    saveItemBtn.addEventListener('click', async function () {
+      const name = itemNameInput.value.trim();
+      const category = itemCategoryIdInput.value;
+      const status = itemStatusInput.value;
+      itemErrorEl.classList.add('d-none');
+      if (!category) {
+        itemErrorEl.textContent = 'Select a category first.';
+        itemErrorEl.classList.remove('d-none');
+        return;
+      }
+      if (!itemNameInput.checkValidity() || !name) {
+        itemNameInput.reportValidity();
+        itemErrorEl.textContent = 'Please enter an article/item name.';
+        itemErrorEl.classList.remove('d-none');
+        return;
+      }
+
+      saveItemBtn.disabled = true;
+      try {
+        const response = await fetch('{% url "equipment:item_create" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: new URLSearchParams({ category, name, status }),
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Could not save.');
+        }
+        itemNameInput.value = '';
+        itemStatusInput.value = 'Active';
+        bootstrap.Modal.getInstance(itemModalEl).hide();
+        if (typeof window.reloadEquipmentItemOptions === 'function') {
+          await window.reloadEquipmentItemOptions(data.name);
+        } else if (itemNameSelect) {
+          const option = document.createElement('option');
+          option.value = data.name;
+          option.textContent = data.name;
+          option.selected = true;
+          itemNameSelect.appendChild(option);
+          itemNameSelect.value = data.name;
+          itemNameSelect.disabled = false;
+        }
+      } catch (err) {
+        itemErrorEl.textContent = err.message;
+        itemErrorEl.classList.remove('d-none');
+      } finally {
+        saveItemBtn.disabled = false;
+      }
+    });
+
+    itemModalEl.addEventListener('hidden.bs.modal', function () {
+      itemNameInput.value = '';
+      itemStatusInput.value = 'Active';
+      itemErrorEl.classList.add('d-none');
+    });
+  }
+
+  const supplierSelect = document.getElementById('id_supplier');
+  const supplierNameInput = document.getElementById('newSupplierName');
+  const supplierAddressInput = document.getElementById('newSupplierAddress');
+  const supplierStatusInput = document.getElementById('newSupplierStatus');
+  const supplierErrorEl = document.getElementById('supplierFormError');
+  const saveSupplierBtn = document.getElementById('saveSupplierBtn');
+  const supplierModalEl = document.getElementById('addSupplierModal');
+
+  if (supplierSelect && saveSupplierBtn) {
+    saveSupplierBtn.addEventListener('click', async function () {
+      const name = supplierNameInput.value.trim();
+      const address = supplierAddressInput.value.trim();
+      const status = supplierStatusInput.value;
+      supplierErrorEl.classList.add('d-none');
+      if (!supplierNameInput.checkValidity() || !name) {
+        supplierNameInput.reportValidity();
+        supplierErrorEl.textContent = 'Please enter a supplier name.';
+        supplierErrorEl.classList.remove('d-none');
+        return;
+      }
+
+      saveSupplierBtn.disabled = true;
+      try {
+        await createOption(
+          supplierSelect,
+          '{% url "equipment:supplier_create" %}',
+          { name, address, status },
+          supplierModalEl,
+          function () {
+            supplierNameInput.value = '';
+            supplierAddressInput.value = '';
+            supplierStatusInput.value = 'Active';
+          }
+        );
+      } catch (err) {
+        supplierErrorEl.textContent = err.message;
+        supplierErrorEl.classList.remove('d-none');
+      } finally {
+        saveSupplierBtn.disabled = false;
+      }
+    });
+
+    supplierModalEl.addEventListener('hidden.bs.modal', function () {
+      supplierNameInput.value = '';
+      supplierAddressInput.value = '';
+      supplierStatusInput.value = 'Active';
+      supplierErrorEl.classList.add('d-none');
+    });
+  }
+
+  const fundSourceSelect = document.getElementById('id_fund_source');
+  const fundSourceNameInput = document.getElementById('newFundSourceName');
+  const fundSourceCodeInput = document.getElementById('newFundSourceCode');
+  const fundSourceStatusInput = document.getElementById('newFundSourceStatus');
+  const fundSourceErrorEl = document.getElementById('fundSourceFormError');
+  const saveFundSourceBtn = document.getElementById('saveFundSourceBtn');
+  const fundSourceModalEl = document.getElementById('addFundSourceModal');
+
+  if (fundSourceSelect && saveFundSourceBtn) {
+    saveFundSourceBtn.addEventListener('click', async function () {
+      const name = fundSourceNameInput.value.trim();
+      const code = fundSourceCodeInput.value.trim();
+      const status = fundSourceStatusInput.value;
+      fundSourceErrorEl.classList.add('d-none');
+      if (!fundSourceNameInput.checkValidity() || !name || !code) {
+        fundSourceNameInput.reportValidity();
+        if (name && !code) {
+          fundSourceCodeInput.reportValidity();
+        }
+        fundSourceErrorEl.textContent = 'Please enter both fund source name and code.';
+        fundSourceErrorEl.classList.remove('d-none');
+        return;
+      }
+
+      saveFundSourceBtn.disabled = true;
+      try {
+        await createOption(
+          fundSourceSelect,
+          '{% url "equipment:fund_source_create" %}',
+          { name, code, status },
+          fundSourceModalEl,
+          function () {
+            fundSourceNameInput.value = '';
+            fundSourceCodeInput.value = '';
+            fundSourceStatusInput.value = 'Active';
+          }
+        );
+      } catch (err) {
+        fundSourceErrorEl.textContent = err.message;
+        fundSourceErrorEl.classList.remove('d-none');
+      } finally {
+        saveFundSourceBtn.disabled = false;
+      }
+    });
+
+    fundSourceModalEl.addEventListener('hidden.bs.modal', function () {
+      fundSourceNameInput.value = '';
+      fundSourceCodeInput.value = '';
+      fundSourceStatusInput.value = 'Active';
+      fundSourceErrorEl.classList.add('d-none');
+    });
+  }
+
+  const procurementModeSelect = document.getElementById('id_mode_of_procurement');
+  const procurementModeNameInput = document.getElementById('newProcurementModeName');
+  const procurementModeStatusInput = document.getElementById('newProcurementModeStatus');
+  const procurementModeErrorEl = document.getElementById('procurementModeFormError');
+  const saveProcurementModeBtn = document.getElementById('saveProcurementModeBtn');
+  const procurementModeModalEl = document.getElementById('addProcurementModeModal');
+
+  if (procurementModeSelect && saveProcurementModeBtn) {
+    saveProcurementModeBtn.addEventListener('click', async function () {
+      const name = procurementModeNameInput.value.trim();
+      const status = procurementModeStatusInput.value;
+      procurementModeErrorEl.classList.add('d-none');
+      if (!procurementModeNameInput.checkValidity() || !name) {
+        procurementModeNameInput.reportValidity();
+        procurementModeErrorEl.textContent = 'Please enter a mode of procurement name.';
+        procurementModeErrorEl.classList.remove('d-none');
+        return;
+      }
+
+      saveProcurementModeBtn.disabled = true;
+      try {
+        await createOption(
+          procurementModeSelect,
+          '{% url "equipment:procurement_mode_create" %}',
+          { name, status },
+          procurementModeModalEl,
+          function () {
+            procurementModeNameInput.value = '';
+            procurementModeStatusInput.value = 'Active';
+          }
+        );
+      } catch (err) {
+        procurementModeErrorEl.textContent = err.message;
+        procurementModeErrorEl.classList.remove('d-none');
+      } finally {
+        saveProcurementModeBtn.disabled = false;
+      }
+    });
+
+    procurementModeModalEl.addEventListener('hidden.bs.modal', function () {
+      procurementModeNameInput.value = '';
+      procurementModeStatusInput.value = 'Active';
+      procurementModeErrorEl.classList.add('d-none');
+    });
+  }
+
+  const paymentMethodSelect = document.getElementById('id_payment_method');
+  const paymentMethodNameInput = document.getElementById('newPaymentMethodName');
+  const paymentMethodStatusInput = document.getElementById('newPaymentMethodStatus');
+  const paymentMethodErrorEl = document.getElementById('paymentMethodFormError');
+  const savePaymentMethodBtn = document.getElementById('savePaymentMethodBtn');
+  const paymentMethodModalEl = document.getElementById('addPaymentMethodModal');
+
+  if (paymentMethodSelect && savePaymentMethodBtn) {
+    savePaymentMethodBtn.addEventListener('click', async function () {
+      const name = paymentMethodNameInput.value.trim();
+      const status = paymentMethodStatusInput.value;
+      paymentMethodErrorEl.classList.add('d-none');
+      if (!paymentMethodNameInput.checkValidity() || !name) {
+        paymentMethodNameInput.reportValidity();
+        paymentMethodErrorEl.textContent = 'Please enter a payment method name.';
+        paymentMethodErrorEl.classList.remove('d-none');
+        return;
+      }
+
+      savePaymentMethodBtn.disabled = true;
+      try {
+        await createOption(
+          paymentMethodSelect,
+          '{% url "equipment:payment_method_create" %}',
+          { name, status },
+          paymentMethodModalEl,
+          function () {
+            paymentMethodNameInput.value = '';
+            paymentMethodStatusInput.value = 'Active';
+          }
+        );
+      } catch (err) {
+        paymentMethodErrorEl.textContent = err.message;
+        paymentMethodErrorEl.classList.remove('d-none');
+      } finally {
+        savePaymentMethodBtn.disabled = false;
+      }
+    });
+
+    paymentMethodModalEl.addEventListener('hidden.bs.modal', function () {
+      paymentMethodNameInput.value = '';
+      paymentMethodStatusInput.value = 'Active';
+      paymentMethodErrorEl.classList.add('d-none');
+    });
+  }
+})();
+</script>
+{% endif %}
+{% endblock %}

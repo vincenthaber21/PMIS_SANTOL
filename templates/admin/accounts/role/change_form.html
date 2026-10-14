@@ -1,0 +1,147 @@
+{% extends "admin/change_form.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .role-preset-panel {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 0 0 18px;
+  }
+  .role-preset-panel h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .role-preset-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .role-preset-buttons button {
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    color: #0f172a;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .role-preset-buttons button:hover {
+    background: #EEF2FF;
+    border-color: #1a56db;
+  }
+  .role-preset-buttons button[data-preset="full"] {
+    background: #003087;
+    border-color: #003087;
+    color: #fff;
+  }
+  .role-preset-buttons button[data-preset="blocked"] {
+    background: #b91c1c;
+    border-color: #b91c1c;
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
+{% block field_sets %}
+<div class="role-preset-panel">
+  <h3>Quick access presets</h3>
+  <div class="role-preset-buttons">
+    <button type="button" data-preset="full">Full website access</button>
+    <button type="button" data-preset="custodian">Property custodian</button>
+    <button type="button" data-preset="supply_officer">Supply officer</button>
+    <button type="button" data-preset="technician">Technician</button>
+    <button type="button" data-preset="staff">Staff (limited)</button>
+    <button type="button" data-preset="blocked">No website access</button>
+  </div>
+</div>
+{{ block.super }}
+{% endblock %}
+
+{% block admin_change_form_document_ready %}
+{{ block.super }}
+<script>
+(function () {
+  const presets = {
+    full: {
+      can_access_site: true,
+      can_manage_users: true,
+      can_manage_equipment: true,
+      can_view_all_equipment: true,
+      can_manage_borrowing: true,
+      can_manage_maintenance: true,
+      can_view_reports: true,
+      acts_as_supply_officer: false,
+    },
+    custodian: {
+      can_access_site: true,
+      can_manage_users: true,
+      can_manage_equipment: true,
+      can_view_all_equipment: true,
+      can_manage_borrowing: true,
+      can_manage_maintenance: true,
+      can_view_reports: true,
+      acts_as_supply_officer: true,
+    },
+    supply_officer: {
+      can_access_site: true,
+      can_manage_users: true,
+      can_manage_equipment: true,
+      can_view_all_equipment: true,
+      can_manage_borrowing: true,
+      can_manage_maintenance: true,
+      can_view_reports: true,
+      acts_as_supply_officer: true,
+    },
+    technician: {
+      can_access_site: true,
+      can_manage_users: false,
+      can_manage_equipment: false,
+      can_view_all_equipment: true,
+      can_manage_borrowing: false,
+      can_manage_maintenance: true,
+      can_view_reports: true,
+      acts_as_supply_officer: false,
+    },
+    staff: {
+      can_access_site: true,
+      can_manage_users: false,
+      can_manage_equipment: false,
+      can_view_all_equipment: false,
+      can_manage_borrowing: false,
+      can_manage_maintenance: false,
+      can_view_reports: true,
+      acts_as_supply_officer: false,
+    },
+    blocked: {
+      can_access_site: false,
+      can_manage_users: false,
+      can_manage_equipment: false,
+      can_view_all_equipment: false,
+      can_manage_borrowing: false,
+      can_manage_maintenance: false,
+      can_view_reports: false,
+      acts_as_supply_officer: false,
+    },
+  };
+
+  document.querySelectorAll('.role-preset-buttons button[data-preset]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const values = presets[btn.dataset.preset];
+      if (!values) {
+        return;
+      }
+      Object.keys(values).forEach(function (field) {
+        const input = document.getElementById('id_' + field);
+        if (input) {
+          input.checked = values[field];
+        }
+      });
+    });
+  });
+})();
+</script>
+{% endblock %}

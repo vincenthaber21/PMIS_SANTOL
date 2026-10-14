@@ -1,0 +1,20 @@
+{% extends "email/base.html" %}
+
+{% block email_title %}Verify your email — {{ site_short_name }}{% endblock %}
+
+{% block email_content %}
+<p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Hello,</p>
+<p style="margin:0 0 20px;font-size:15px;line-height:1.6;">A new account is being set up for you on <strong>{{ site_name }}</strong>. Enter the verification code below to confirm your email address.</p>
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 20px;">
+  <tr>
+    <td align="center" style="background-color:#eef2ff;border:1px solid #c2d4f0;border-radius:8px;padding:24px 16px;">
+      <p style="margin:0 0 8px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1px;">Verification code</p>
+      <p style="margin:0;font-size:32px;font-weight:bold;letter-spacing:8px;color:#003087;font-family:Consolas,Monaco,monospace;">{{ otp }}</p>
+    </td>
+  </tr>
+</table>
+
+<p style="margin:0 0 12px;font-size:14px;line-height:1.6;">This code expires in <strong>{{ expires_minutes }} minutes</strong>.</p>
+<p style="margin:0;font-size:13px;line-height:1.6;color:#64748b;">If you did not expect this email, you can safely ignore it.</p>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+  .role-access-help {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .role-access-help h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .role-access-help p {
+    margin: 0 0 10px;
+    color: #475569;
+    font-size: 13px;
+  }
+  .role-access-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .role-access-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #c2d4f0;
+    font-size: 12px;
+    color: #001a5e;
+  }
+  #result_list th.field-can_access_site,
+  #result_list td.field-can_access_site {
+    background: #fff7ed;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="role-access-help">
+  <h3>Website access by role</h3>
+  <p>
+    Tick the permission columns below to control what each role can use on the website.
+    <strong>Can access site</strong> is the main on/off switch — uncheck it to block sign-in for that role.
+    Click <strong>Save</strong> at the bottom after changing checkboxes.
+  </p>
+  <div class="role-access-legend">
+    <span><strong>Can access site</strong> — sign in and use the website</span>
+    <span><strong>Can manage users</strong> — user management menu</span>
+    <span><strong>Can manage equipment</strong> — register and edit inventory</span>
+    <span><strong>Can view all equipment</strong> — full inventory list</span>
+    <span><strong>Can manage borrowing</strong> — approve borrow requests</span>
+    <span><strong>Can manage maintenance</strong> — update repair tickets</span>
+    <span><strong>Can view reports</strong> — reports, COA, audit trail</span>
+    <span><strong>Acts as supply officer</strong> — PAR/ICS signatory role</span>
+  </div>
+</div>
+{{ block.super }}
+{% endblock %}
