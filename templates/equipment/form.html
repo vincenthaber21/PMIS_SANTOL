@@ -242,13 +242,13 @@
               {% if request.user.is_admin or request.user.is_custodian %}
               <button type="button" class="btn btn-outline-primary" id="btnAddEquipmentItem"
                       data-bs-toggle="modal" data-bs-target="#addEquipmentItemModal"
-                      title="Add article/item name" disabled>
+                      title="Add article/item name">
                 <i class="bi bi-plus-lg"></i>
               </button>
               {% endif %}
               {% endif %}
             </div>
-            <div class="form-text" id="nameCategoryHint">Select a category first to load article/item names.</div>
+            <div class="form-text" id="nameCategoryHint">Select a category, or use + to add an article/item name.</div>
             {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors|join:", " }}</div>{% endif %}
           </div>
           <div class="col-md-3">
@@ -477,14 +477,15 @@
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <label class="form-label">Category</label>
-          <input type="text" class="form-control" id="newItemCategoryLabel" readonly>
-          <input type="hidden" id="newItemCategoryId" value="">
+          <label class="form-label" for="newItemCategory">Category <span class="text-danger">*</span></label>
+          <select class="form-select" id="newItemCategory" required>
+            <option value="">Select Category</option>
+          </select>
         </div>
         <div class="mb-3">
-          <label class="form-label" for="newItemName">Article/Item Name *</label>
+          <label class="form-label" for="newItemName">Article/Item Name <span class="text-danger">*</span></label>
           <input type="text" class="form-control text-uppercase" id="newItemName"
-                 placeholder="e.g. DESKTOP COMPUTER" required>
+                 placeholder="e.g. DESKTOP COMPUTER" maxlength="200" required>
         </div>
         <div>
           <label class="form-label" for="newItemStatus">Status</label>
@@ -986,7 +987,6 @@
   const categorySelect = document.getElementById('id_category');
   const nameSelect = document.getElementById('id_name');
   const hintEl = document.getElementById('nameCategoryHint');
-  const addItemBtn = document.getElementById('btnAddEquipmentItem');
   if (!categorySelect || !nameSelect) return;
 
   let loadRequest = 0;
@@ -994,11 +994,6 @@
 
   function setHint(text) {
     if (hintEl) hintEl.textContent = text || '';
-  }
-
-  function setAddItemEnabled(enabled) {
-    if (!addItemBtn) return;
-    addItemBtn.disabled = !enabled;
   }
 
   function fillNameOptions(items, selectedName) {
@@ -1034,10 +1029,9 @@
 
   async function loadItemsForCategory(preserveName) {
     const categoryId = categorySelect.value;
-    setAddItemEnabled(Boolean(categoryId));
     if (!categoryId) {
       fillNameOptions([], '');
-      setHint('Select a category first to load article/item names.');
+      setHint('Select a category, or use + to add an article/item name.');
       return;
     }
 
@@ -1072,7 +1066,9 @@
   }
 
   categorySelect.addEventListener('change', function () {
-    loadItemsForCategory('');
+    const preserve = window._preserveEquipmentItemName || '';
+    window._preserveEquipmentItemName = '';
+    loadItemsForCategory(preserve);
   });
 
   window.reloadEquipmentItemOptions = function (selectedName) {
@@ -1084,7 +1080,6 @@
   } else {
     fillNameOptions([], '');
     nameSelect.disabled = true;
-    setAddItemEnabled(false);
   }
 })();
 </script>
@@ -1236,36 +1231,57 @@
 
   const itemNameSelect = document.getElementById('id_name');
   const itemNameInput = document.getElementById('newItemName');
-  const itemCategoryIdInput = document.getElementById('newItemCategoryId');
-  const itemCategoryLabel = document.getElementById('newItemCategoryLabel');
+  const itemCategorySelect = document.getElementById('newItemCategory');
   const itemStatusInput = document.getElementById('newItemStatus');
   const itemErrorEl = document.getElementById('equipmentItemFormError');
   const saveItemBtn = document.getElementById('saveEquipmentItemBtn');
   const itemModalEl = document.getElementById('addEquipmentItemModal');
 
-  if (categorySelect && itemModalEl && saveItemBtn) {
+  function syncItemCategoryOptions() {
+    if (!categorySelect || !itemCategorySelect) return;
+    const current = categorySelect.value || '';
+    itemCategorySelect.innerHTML = '';
+    Array.from(categorySelect.options).forEach(function (opt) {
+      const copy = document.createElement('option');
+      copy.value = opt.value;
+      copy.textContent = opt.textContent;
+      itemCategorySelect.appendChild(copy);
+    });
+    itemCategorySelect.value = current;
+  }
+
+  function showItemError(message) {
+    itemErrorEl.textContent = message;
+    itemErrorEl.classList.remove('d-none');
+  }
+
+  if (categorySelect && itemModalEl && saveItemBtn && itemCategorySelect && itemNameInput) {
     itemModalEl.addEventListener('show.bs.modal', function () {
-      const categoryId = categorySelect.value;
-      const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-      itemCategoryIdInput.value = categoryId || '';
-      itemCategoryLabel.value = selectedOption ? selectedOption.textContent : '';
+      syncItemCategoryOptions();
       itemErrorEl.classList.add('d-none');
     });
 
-    saveItemBtn.addEventListener('click', async function () {
+    itemModalEl.addEventListener('shown.bs.modal', function () {
+      if (itemCategorySelect.value) {
+        itemNameInput.focus();
+      } else {
+        itemCategorySelect.focus();
+      }
+    });
+
+    async function saveEquipmentItem() {
       const name = itemNameInput.value.trim();
-      const category = itemCategoryIdInput.value;
+      const category = itemCategorySelect.value;
       const status = itemStatusInput.value;
       itemErrorEl.classList.add('d-none');
       if (!category) {
-        itemErrorEl.textContent = 'Select a category first.';
-        itemErrorEl.classList.remove('d-none');
+        showItemError('Select a category first.');
+        itemCategorySelect.focus();
         return;
       }
-      if (!itemNameInput.checkValidity() || !name) {
-        itemNameInput.reportValidity();
-        itemErrorEl.textContent = 'Please enter an article/item name.';
-        itemErrorEl.classList.remove('d-none');
+      if (!name) {
+        showItemError('Please enter an article/item name.');
+        itemNameInput.focus();
         return;
       }
 
@@ -1280,14 +1296,26 @@
           },
           body: new URLSearchParams({ category, name, status }),
         });
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (parseErr) {
+          throw new Error('Could not save the article/item name.');
+        }
         if (!response.ok || !data.success) {
           throw new Error(data.error || 'Could not save.');
         }
         itemNameInput.value = '';
         itemStatusInput.value = 'Active';
-        bootstrap.Modal.getInstance(itemModalEl).hide();
-        if (typeof window.reloadEquipmentItemOptions === 'function') {
+        const modal = bootstrap.Modal.getInstance(itemModalEl) || bootstrap.Modal.getOrCreateInstance(itemModalEl);
+        modal.hide();
+
+        const chosenCategory = String(data.category_id || category);
+        if (categorySelect.value !== chosenCategory) {
+          window._preserveEquipmentItemName = data.name;
+          categorySelect.value = chosenCategory;
+          categorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+        } else if (typeof window.reloadEquipmentItemOptions === 'function') {
           await window.reloadEquipmentItemOptions(data.name);
         } else if (itemNameSelect) {
           const option = document.createElement('option');
@@ -1299,10 +1327,17 @@
           itemNameSelect.disabled = false;
         }
       } catch (err) {
-        itemErrorEl.textContent = err.message;
-        itemErrorEl.classList.remove('d-none');
+        showItemError(err.message);
       } finally {
         saveItemBtn.disabled = false;
+      }
+    }
+
+    saveItemBtn.addEventListener('click', saveEquipmentItem);
+    itemNameInput.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        saveEquipmentItem();
       }
     });
 
