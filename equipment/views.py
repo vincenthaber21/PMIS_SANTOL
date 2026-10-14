@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, ProtectedError, Count, OuterRef, Subquery, IntegerField, DateTimeField, F
+from django.db.models import Q, ProtectedError, Count, OuterRef, Subquery, IntegerField, DateTimeField, F, Sum
 from django.db.models.functions import Coalesce
 from urllib.parse import urlencode
 from django.http import JsonResponse, HttpResponse
@@ -591,6 +591,9 @@ def location_list(request):
         per_page = 10
     per_page = per_page if per_page in (10, 20, 50) else 10
 
+    total_count = qs.count()
+    active_count = qs.filter(status=Department.STATUS_ACTIVE).count()
+
     paginator = Paginator(qs, per_page)
     page = paginator.get_page(request.GET.get('page'))
 
@@ -599,7 +602,10 @@ def location_list(request):
         'search': search,
         'per_page': per_page,
         'form': DepartmentForm(),
-        'total_count': qs.count(),
+        'total_count': total_count,
+        'active_count': active_count,
+        'inactive_count': total_count - active_count,
+        'equipment_total': Equipment.objects.filter(department__in=qs).count(),
     })
 
 
@@ -708,7 +714,7 @@ def _category_list_context(request, equipment_form=None, open_equipment_category
     from django.db.models import Prefetch
 
     qs = Category.objects.annotate(
-        equipment_count=Count('equipment'),
+        equipment_count=Count('equipment', distinct=True),
         item_count=Count('items', distinct=True),
     ).order_by('code')
     search = request.GET.get('search', '').strip()
@@ -724,6 +730,13 @@ def _category_list_context(request, equipment_form=None, open_equipment_category
     except (TypeError, ValueError):
         per_page = 10
     per_page = per_page if per_page in (10, 20, 50) else 10
+
+    totals = qs.aggregate(
+        equipment_total=Sum('equipment_count'),
+        item_total=Sum('item_count'),
+    )
+    total_count = qs.count()
+    active_count = qs.filter(status=Category.STATUS_ACTIVE).count()
 
     paginator = Paginator(qs, per_page)
     page = paginator.get_page(request.GET.get('page'))
@@ -769,7 +782,11 @@ def _category_list_context(request, equipment_form=None, open_equipment_category
         'search': search,
         'per_page': per_page,
         'form': CategoryForm(),
-        'total_count': qs.count(),
+        'total_count': total_count,
+        'active_count': active_count,
+        'inactive_count': total_count - active_count,
+        'item_total': totals['item_total'] or 0,
+        'equipment_total': totals['equipment_total'] or 0,
         'departments': Department.objects.filter(status=Department.STATUS_ACTIVE).order_by('name'),
         'fund_sources': FundSource.objects.filter(status=FundSource.STATUS_ACTIVE).order_by('name'),
         'equipment_form': equipment_form,
@@ -1235,16 +1252,25 @@ def property_status_list(request):
         per_page = 10
     per_page = per_page if per_page in (10, 20, 50) else 10
 
+    total_count = qs.count()
+    active_count = qs.filter(status=PropertyStatus.STATUS_ACTIVE).count()
+    disposal_reasons = DisposalReason.objects.all().order_by('sort_order', 'name')
+    reason_total = disposal_reasons.count()
+
     paginator = Paginator(qs, per_page)
     page = paginator.get_page(request.GET.get('page'))
-    disposal_reasons = DisposalReason.objects.all().order_by('sort_order', 'name')
 
     return render(request, 'equipment/property_status_list.html', {
         'page_obj': page,
         'search': search,
         'per_page': per_page,
         'form': PropertyStatusForm(),
-        'total_count': qs.count(),
+        'total_count': total_count,
+        'active_count': active_count,
+        'inactive_count': total_count - active_count,
+        'equipment_total': Equipment.objects.filter(property_status__in=qs).count(),
+        'reason_total': reason_total,
+        'reason_active': disposal_reasons.filter(status=DisposalReason.STATUS_ACTIVE).count(),
         'disposal_reasons': disposal_reasons,
         'disposal_reason_form': DisposalReasonForm(),
     })
@@ -1551,6 +1577,13 @@ def fund_source_list(request):
         per_page = 10
     per_page = per_page if per_page in (10, 20, 50) else 10
 
+    total_count = qs.count()
+    active_count = qs.filter(status=FundSource.STATUS_ACTIVE).count()
+    equipment_totals = Equipment.objects.filter(fund_source__in=qs).aggregate(
+        equipment_total=Count('pk'),
+        acquisition_total=Sum('acquisition_cost'),
+    )
+
     paginator = Paginator(qs, per_page)
     page = paginator.get_page(request.GET.get('page'))
 
@@ -1559,7 +1592,11 @@ def fund_source_list(request):
         'search': search,
         'per_page': per_page,
         'form': FundSourceForm(),
-        'total_count': qs.count(),
+        'total_count': total_count,
+        'active_count': active_count,
+        'inactive_count': total_count - active_count,
+        'equipment_total': equipment_totals['equipment_total'] or 0,
+        'acquisition_total': equipment_totals['acquisition_total'] or 0,
     })
 
 

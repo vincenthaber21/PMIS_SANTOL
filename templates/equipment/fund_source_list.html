@@ -21,6 +21,67 @@
     </div>
   </div>
 
+  {% widthratio active_count total_count 100 as active_pct %}
+  {% widthratio inactive_count total_count 100 as inactive_pct %}
+  <div class="section-title"><i class="bi bi-clipboard2-data"></i> Summary</div>
+  <div class="row g-3 mb-4 fs-kpis">
+    <div class="col-6 col-lg-3">
+      <div class="kpi-card" style="--kpi-accent:var(--primary);">
+        <div class="kpi-top">
+          <span class="kpi-label">Fund Sources</span>
+          <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-cash-stack"></i></span>
+        </div>
+        <div class="kpi-meta">
+          <div class="kpi-value">{{ total_count }}</div>
+          <span class="kpi-pct">100%</span>
+        </div>
+        <div class="kpi-track"><span style="width:{% if total_count %}100{% else %}0{% endif %}%"></span></div>
+        <div class="kpi-caption">{% if search %}Matching your search{% else %}Funding options on equipment{% endif %}</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="kpi-card" style="--kpi-accent:#059669;">
+        <div class="kpi-top">
+          <span class="kpi-label">Active</span>
+          <span class="kpi-icon" style="background:#ECFDF5;color:#059669;"><i class="bi bi-check-circle-fill"></i></span>
+        </div>
+        <div class="kpi-meta">
+          <div class="kpi-value">{{ active_count }}</div>
+          <span class="kpi-pct">{{ active_pct|default:0 }}%</span>
+        </div>
+        <div class="kpi-track"><span style="width:{{ active_pct|default:0 }}%"></span></div>
+        <div class="kpi-caption">Available when registering equipment</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="kpi-card" style="--kpi-accent:#64748B;">
+        <div class="kpi-top">
+          <span class="kpi-label">Inactive</span>
+          <span class="kpi-icon" style="background:#F1F5F9;color:#64748B;"><i class="bi bi-pause-circle-fill"></i></span>
+        </div>
+        <div class="kpi-meta">
+          <div class="kpi-value">{{ inactive_count }}</div>
+          <span class="kpi-pct">{{ inactive_pct|default:0 }}%</span>
+        </div>
+        <div class="kpi-track"><span style="width:{{ inactive_pct|default:0 }}%"></span></div>
+        <div class="kpi-caption">Hidden from new records</div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="kpi-card" style="--kpi-accent:#D97706;">
+        <div class="kpi-top">
+          <span class="kpi-label">Equipment</span>
+          <span class="kpi-icon" style="background:#FFFBEB;color:#D97706;"><i class="bi bi-pc-display"></i></span>
+        </div>
+        <div class="kpi-meta">
+          <div class="kpi-value">{{ equipment_total }}</div>
+        </div>
+        <div class="kpi-track"><span style="width:{% if equipment_total %}100{% else %}0{% endif %}%"></span></div>
+        <div class="kpi-caption">₱{{ acquisition_total|floatformat:0 }} acquisition cost</div>
+      </div>
+    </div>
+  </div>
+
   <div class="card mb-3 fs-filter-card">
     <div class="card-body">
       <form class="fs-filter-form" method="get">
@@ -252,6 +313,43 @@
 
 {% block extra_css %}
 <style>
+  .fs-kpis .kpi-card { height: 100%; padding: 1.3rem 1.3rem 1.25rem 1.5rem; }
+  .fs-kpis .kpi-label { font-size: 0.8rem; }
+  .fs-kpis .kpi-value { font-size: 2.15rem; }
+  .fs-kpis .kpi-icon { width: 46px; height: 46px; font-size: 1.3rem; }
+  .fs-kpis .kpi-caption { font-size: 0.85rem; }
+  .fs-kpis .kpi-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.15rem;
+  }
+  .fs-kpis .kpi-pct {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #64748B;
+    white-space: nowrap;
+  }
+  .fs-kpis .kpi-track {
+    margin-top: 0.85rem;
+    height: 5px;
+    border-radius: 999px;
+    background: #F1F5F9;
+    overflow: hidden;
+  }
+  .fs-kpis .kpi-track > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--kpi-accent, var(--accent));
+  }
+  @media (max-width: 575.98px) {
+    .fs-kpis .kpi-value { font-size: 1.55rem; }
+    .fs-kpis .kpi-icon { width: 36px; height: 36px; font-size: 1rem; }
+    .fs-kpis .kpi-card { padding: 1rem 1rem 0.95rem 1.15rem; }
+  }
+
   .fs-filter-label {
     display: block;
     font-size: 0.72rem;

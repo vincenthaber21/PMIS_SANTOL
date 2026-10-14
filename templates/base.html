@@ -687,11 +687,11 @@
     </a>
 
     <div class="nav-section">Equipment</div>
-    <a href="{% url 'equipment:list' %}" class="nav-link {% if 'equipment' in request.path %}active{% endif %}">
+    <a href="{% url 'equipment:list' %}" class="nav-link{% if request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'list' or request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'detail' or request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'edit' or request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'assign_user' or request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'update_property_status' or request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'inventory_tag_print' or request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'archive' %} active{% endif %}">
       <i class="bi bi-pc-display"></i> Equipment Inventory
     </a>
     {% if user.is_admin or user.is_custodian %}
-    <a href="{% url 'equipment:create' %}" class="nav-link">
+    <a href="{% url 'equipment:create' %}" class="nav-link{% if request.resolver_match.namespace == 'equipment' and request.resolver_match.url_name == 'create' %} active{% endif %}">
       <i class="bi bi-plus-square-fill"></i> Equipment Registration
     </a>
     <a href="{% url 'equipment:category_list' %}" class="nav-link {% if '/categories' in request.path %}active{% endif %}">
