@@ -467,7 +467,7 @@ def equipment_detail(request, pk):
     equipment = get_object_or_404(
         Equipment.objects.select_related(
             'department', 'assigned_user', 'category', 'property_status', 'disposal_reason',
-            'fund_source', 'mode_of_procurement', 'supplier',
+            'fund_source', 'mode_of_procurement', 'supplier', 'payment_method',
         ),
         pk=pk,
     )

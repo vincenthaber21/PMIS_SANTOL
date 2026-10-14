@@ -5,71 +5,130 @@
 
 {% block extra_css %}
 <style>
-  .eq-detail { --eq-border: #e8eef4; --eq-muted: #64748b; --eq-text: #1e293b; }
+  .eq-detail { --eq-border: #e6e2f0; --eq-muted: #64748b; --eq-text: #1e293b; }
 
-  /* Hero */
+  .eq-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--eq-muted);
+    text-decoration: none;
+    margin-bottom: 0.65rem;
+  }
+  .eq-back:hover { color: var(--primary); }
+
   .eq-hero {
     background: #fff;
     border: 1px solid var(--eq-border);
     border-radius: 16px;
     padding: 1.35rem 1.5rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
     box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
   }
   .eq-hero__title {
-    font-size: 1.35rem;
+    font-size: 1.65rem;
     font-weight: 700;
     color: var(--primary);
-    margin: 0 0 0.35rem;
-    line-height: 1.3;
+    margin: 0 0 0.65rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
   }
   .eq-hero__meta {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem 0.85rem;
-    font-size: 0.82rem;
-    color: var(--eq-muted);
+    gap: 0.5rem 0.65rem;
   }
-  .eq-hero__meta a { color: var(--eq-muted); text-decoration: none; }
-  .eq-hero__meta a:hover { color: var(--primary); }
-  .eq-hero__badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.85rem; }
+  .eq-prop {
+    font-size: 0.95rem !important;
+    padding: 0.35em 0.7em !important;
+  }
+  .eq-copy {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--eq-border);
+    background: #fff;
+    color: var(--primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .eq-copy:hover { background: var(--brand-surface); }
+  .eq-hero__badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .eq-lead {
+    margin: 0.85rem 0 0;
+    max-width: 42rem;
+    color: var(--eq-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
   .eq-hero__actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    justify-content: flex-end;
   }
-  .eq-hero__actions .btn { font-size: 0.8125rem; border-radius: 8px; }
+  .eq-hero__actions .btn {
+    min-height: 44px;
+    padding: 0.55rem 1rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+  }
 
   /* Quick stats */
   .eq-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 0.75rem;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.15rem;
   }
   @media (max-width: 991px) { .eq-stats { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 575px) { .eq-stats { grid-template-columns: 1fr; } }
   .eq-stat {
     background: #fff;
     border: 1px solid var(--eq-border);
-    border-radius: 12px;
-    padding: 0.9rem 1rem;
+    border-radius: 14px;
+    padding: 1rem 1.05rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-height: 84px;
+  }
+  .eq-stat__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--brand-surface);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
   }
   .eq-stat__label {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     color: #94a3b8;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
   }
   .eq-stat__value {
-    font-size: 0.92rem;
+    font-size: 1.02rem;
     font-weight: 600;
     color: var(--eq-text);
     line-height: 1.35;
+    word-break: break-word;
   }
 
   /* Section cards */
@@ -81,89 +140,135 @@
     overflow: hidden;
     box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
   }
+  .eq-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1rem;
+    align-items: start;
+  }
+  @media (max-width: 991px) {
+    .eq-layout { grid-template-columns: 1fr; }
+    .eq-side { order: -1; }
+  }
+  @media (min-width: 992px) {
+    .eq-side { position: sticky; top: calc(var(--topbar-height) + 1rem); }
+  }
+
   .eq-section__head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.85rem 1.15rem;
+    padding: 0.95rem 1.15rem;
     border-bottom: 1px solid #f1f5f9;
     background: #fafbfc;
   }
   .eq-section__title {
-    font-size: 0.88rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--primary);
     margin: 0;
     letter-spacing: -0.01em;
   }
-  .eq-section__body { padding: 1.15rem; }
+  .eq-section__title i { font-size: 1.05rem; opacity: 0.85; }
+  .eq-section__body { padding: 0; }
 
-  /* Field grid */
   .eq-fields {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem 1.25rem;
   }
   @media (max-width: 767px) { .eq-fields { grid-template-columns: 1fr; } }
   .eq-fields--3 { grid-template-columns: repeat(3, 1fr); }
   @media (max-width: 991px) { .eq-fields--3 { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 575px) { .eq-fields--3 { grid-template-columns: 1fr; } }
+  .eq-field {
+    padding: 0.9rem 1.15rem;
+    border-bottom: 1px solid #f1f5f9;
+    min-width: 0;
+  }
+  .eq-fields:not(.eq-fields--3) .eq-field:nth-child(odd) {
+    border-right: 1px solid #f1f5f9;
+  }
+  @media (max-width: 767px) {
+    .eq-fields:not(.eq-fields--3) .eq-field:nth-child(odd) { border-right: 0; }
+  }
+  .eq-field--wide { grid-column: 1 / -1; border-right: 0 !important; }
 
   .eq-field__label {
     display: block;
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     color: #94a3b8;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.28rem;
   }
   .eq-field__value {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: var(--eq-text);
     line-height: 1.45;
+    word-break: break-word;
   }
-  .eq-field__value small { color: var(--eq-muted); }
+  .eq-field__value small { color: var(--eq-muted); font-size: 0.85rem; }
 
-  /* Inline update forms */
-  .eq-inline-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    align-items: center;
-    margin-top: 0.15rem;
+  .eq-update { padding: 1rem 1.1rem 1.1rem; }
+  .eq-update .form-select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 0.95rem;
   }
-  .eq-inline-form .form-select { max-width: 100%; min-width: 10rem; font-size: 0.85rem; }
-  .eq-inline-form .btn { font-size: 0.78rem; padding: 0.3rem 0.65rem; border-radius: 7px; }
+  .eq-update .btn {
+    min-height: 44px;
+    width: 100%;
+    margin-top: 0.55rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+  .eq-update + .eq-update {
+    border-top: 1px solid #f1f5f9;
+  }
 
   /* Notes & empty states */
   .eq-note {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     color: var(--eq-muted);
-    margin: 0.85rem 0 0;
-    padding-top: 0.85rem;
+    margin: 0;
+    padding: 0.95rem 1.15rem 1.1rem;
     border-top: 1px solid #f1f5f9;
     line-height: 1.55;
   }
   .eq-empty {
-    font-size: 0.875rem;
+    font-size: 0.95rem;
     color: var(--eq-muted);
     margin: 0;
-    padding: 0.25rem 0;
+    padding: 1.15rem;
+  }
+  .eq-section__head .btn { min-height: 40px; font-size: 0.9rem; }
+  .eq-fields--3 .eq-field { border-right: 1px solid #f1f5f9; }
+  .eq-fields--3 .eq-field:nth-child(3n) { border-right: 0; }
+  @media (max-width: 991px) {
+    .eq-fields--3 .eq-field:nth-child(3n) { border-right: 1px solid #f1f5f9; }
+    .eq-fields--3 .eq-field:nth-child(2n) { border-right: 0; }
+  }
+  @media (max-width: 575px) {
+    .eq-fields--3 .eq-field { border-right: 0 !important; }
   }
 
   /* History table */
   .eq-section .table { margin: 0; }
   .eq-section .table thead th {
     background: #fafbfc;
-    font-size: 0.7rem;
-    padding: 0.7rem 1.15rem;
+    font-size: 0.75rem;
+    padding: 0.85rem 1.15rem;
   }
   .eq-section .table tbody td {
-    padding: 0.75rem 1.15rem;
-    font-size: 0.85rem;
+    padding: 0.9rem 1.15rem;
+    font-size: 0.95rem;
     border-color: #f1f5f9;
+    vertical-align: middle;
   }
 
   /* QR sidebar */
@@ -178,10 +283,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
+    padding: 0.95rem 1.15rem;
     border-bottom: 1px solid #f1f5f9;
     background: #fafbfc;
-    font-size: 0.88rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--primary);
   }
@@ -190,14 +295,15 @@
     text-align: center;
   }
   .eq-qr-card__body img {
-    max-width: 150px;
+    width: 210px;
+    max-width: 100%;
     border: 1px solid #f1f5f9;
-    border-radius: 10px;
-    padding: 0.5rem;
+    border-radius: 12px;
+    padding: 0.65rem;
     background: #fff;
   }
   .eq-qr-card__caption {
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     color: var(--eq-muted);
     margin-top: 0.65rem;
     line-height: 1.45;
@@ -208,83 +314,91 @@
 {% block content %}
 <div class="eq-detail">
 
-  <!-- Hero -->
-  <div class="eq-hero">
-    <div class="row g-3 align-items-start">
-      <div class="col-lg-7">
-        <h1 class="eq-hero__title">{{ equipment.display_name }}</h1>
-        <div class="eq-hero__meta">
-          <span><a href="{% url 'equipment:list' %}">Equipment</a></span>
-          <span aria-hidden="true">·</span>
-          <code class="prop-chip">{{ equipment.property_number }}</code>
-        </div>
-        <div class="eq-hero__badges">
+  <a href="{% url 'equipment:list' %}" class="eq-back">
+    <i class="bi bi-arrow-left"></i> Equipment inventory
+  </a>
+
+  <header class="eq-hero">
+    <div>
+      <h1 class="eq-hero__title">{{ equipment.display_name }}</h1>
+      <div class="eq-hero__meta">
+        <code class="prop-chip eq-prop">{{ equipment.property_number }}</code>
+        <button type="button" class="eq-copy" data-copy="{{ equipment.property_number }}" title="Copy property number" aria-label="Copy property number">
+          <i class="bi bi-clipboard"></i>
+        </button>
+        <span class="eq-hero__badges">
           {{ equipment.classification|classification_badge }}
           {{ equipment|form_type_badge }}
           {{ equipment.property_status|property_status_badge }}
-        </div>
+        </span>
       </div>
-      <div class="col-lg-5">
-        <div class="eq-hero__actions">
-          {% if request.user.is_admin or request.user.is_custodian or request.user.is_supply_officer %}
-          {% if equipment.allows_inventory_tag %}
-          <button
-            type="button"
-            class="btn btn-outline-success js-inline-print-btn"
-            data-inline-print-url="{% url 'equipment:inventory_tag_print' equipment.pk %}"
-            data-inline-print-name="{{ equipment.display_name|escape }}"
-            data-inline-print-property-number="{{ equipment.property_number|escape }}">
-            <i class="bi bi-printer me-1"></i>Print Tag
-          </button>
-          {% endif %}
-          {% endif %}
-          {% if qr_code_data %}
-          <button type="button" class="btn btn-outline-secondary" id="qr-toggle-btn" aria-expanded="false" aria-controls="equipment-qr-sidebar">
-            <i class="bi bi-qr-code me-1"></i><span class="qr-toggle-label">QR Code</span>
-          </button>
-          {% endif %}
-          {% if request.user.is_admin or request.user.is_custodian %}
-          <a href="{% url 'equipment:edit' equipment.pk %}" class="btn btn-primary">
-            <i class="bi bi-pencil me-1"></i>Edit
-          </a>
-          {% endif %}
-        </div>
-      </div>
+      {% if equipment.description %}
+      <p class="eq-lead">{{ equipment.description }}</p>
+      {% endif %}
     </div>
-  </div>
+    <div class="eq-hero__actions">
+      {% if request.user.is_admin or request.user.is_custodian or request.user.is_supply_officer %}
+      {% if equipment.allows_inventory_tag %}
+      <button
+        type="button"
+        class="btn btn-outline-success js-inline-print-btn"
+        data-inline-print-url="{% url 'equipment:inventory_tag_print' equipment.pk %}"
+        data-inline-print-name="{{ equipment.display_name|escape }}"
+        data-inline-print-property-number="{{ equipment.property_number|escape }}">
+        <i class="bi bi-printer me-1"></i>Print tag
+      </button>
+      {% endif %}
+      {% endif %}
+      {% if request.user.is_admin or request.user.is_custodian %}
+      <a href="{% url 'equipment:edit' equipment.pk %}" class="btn btn-primary">
+        <i class="bi bi-pencil me-1"></i>Edit record
+      </a>
+      {% endif %}
+    </div>
+  </header>
 
-  <!-- Quick stats -->
   <div class="eq-stats">
     <div class="eq-stat">
-      <div class="eq-stat__label">Acquisition Cost</div>
-      <div class="eq-stat__value">{{ equipment.acquisition_cost|peso }}</div>
+      <div class="eq-stat__icon"><i class="bi bi-cash-stack"></i></div>
+      <div>
+        <div class="eq-stat__label">Acquisition cost</div>
+        <div class="eq-stat__value">{{ equipment.acquisition_cost|peso }}</div>
+      </div>
     </div>
     <div class="eq-stat">
-      <div class="eq-stat__label">Classification</div>
-      <div class="eq-stat__value">{{ equipment.classification|classification_badge }}</div>
+      <div class="eq-stat__icon"><i class="bi bi-bookmark"></i></div>
+      <div>
+        <div class="eq-stat__label">Classification</div>
+        <div class="eq-stat__value">{{ equipment.classification|default:"—" }}</div>
+      </div>
     </div>
     <div class="eq-stat">
-      <div class="eq-stat__label">Location</div>
-      <div class="eq-stat__value">{{ equipment.display_location }}</div>
+      <div class="eq-stat__icon"><i class="bi bi-geo-alt"></i></div>
+      <div>
+        <div class="eq-stat__label">Location</div>
+        <div class="eq-stat__value">{{ equipment.display_location }}</div>
+      </div>
     </div>
     <div class="eq-stat">
-      <div class="eq-stat__label">Assigned To</div>
-      <div class="eq-stat__value">{{ equipment.assigned_user|default:"Unassigned" }}</div>
+      <div class="eq-stat__icon"><i class="bi bi-person"></i></div>
+      <div>
+        <div class="eq-stat__label">Assigned to</div>
+        <div class="eq-stat__value">{{ equipment.assigned_user|default:"Unassigned" }}</div>
+      </div>
     </div>
   </div>
 
-  <div class="row g-3">
-    <div class="col-lg-8" id="equipment-main">
+  <div class="eq-layout">
+    <div id="equipment-main">
 
-      <!-- Equipment Details -->
       <div class="eq-section">
         <div class="eq-section__head">
-          <h2 class="eq-section__title">Equipment Details</h2>
+          <h2 class="eq-section__title"><i class="bi bi-box-seam"></i> Item</h2>
         </div>
         <div class="eq-section__body">
           <div class="eq-fields">
             <div class="eq-field">
-              <span class="eq-field__label">Property Number</span>
+              <span class="eq-field__label">Property number</span>
               <div class="eq-field__value"><code class="prop-chip">{{ equipment.property_number }}</code></div>
             </div>
             <div class="eq-field">
@@ -292,67 +406,42 @@
               <div class="eq-field__value">{{ equipment.category.name }}</div>
             </div>
             <div class="eq-field">
-              <span class="eq-field__label">Serial Number</span>
+              <span class="eq-field__label">Brand</span>
+              <div class="eq-field__value">{{ equipment.brand|default:"—" }}</div>
+            </div>
+            <div class="eq-field">
+              <span class="eq-field__label">Model</span>
+              <div class="eq-field__value">{{ equipment.model|default:"—" }}</div>
+            </div>
+            <div class="eq-field">
+              <span class="eq-field__label">Serial number</span>
               <div class="eq-field__value">{{ equipment.serial_number|default:"—" }}</div>
             </div>
             <div class="eq-field">
-              <span class="eq-field__label">Property Status</span>
-              <div class="eq-field__value">
-                {% if property_status_form %}
-                <form
-                  method="post"
-                  action="{% url 'equipment:update_property_status' equipment.pk %}"
-                  id="propertyStatusUpdateForm"
-                  class="js-equipment-update-form"
-                  data-loading-title="Updating property status"
-                  data-loading-hint="Saving status, syncing QR code, and refreshing the page."
-                  data-loading-steps="Saving property status|Updating QR code|Refreshing equipment details">
-                  {% csrf_token %}
-                  <div class="eq-inline-form">
-                    {{ property_status_form.property_status }}
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Save</button>
-                  </div>
-                  <div id="disposalReasonGroup" class="mt-2{% if not show_disposal_reason %} d-none{% endif %}">
-                    <label class="eq-field__label mb-1" for="disposalReasonSelect">Disposal Reason</label>
-                    {{ property_status_form.disposal_reason }}
-                    {% if property_status_form.disposal_reason.errors %}
-                    <div class="text-danger small mt-1">{{ property_status_form.disposal_reason.errors|join:", " }}</div>
-                    {% endif %}
-                  </div>
-                </form>
-                {% else %}
-                {{ equipment.property_status|property_status_badge }}
-                {% if equipment.disposal_reason %}
-                <div class="mt-1"><small>Disposal: {{ equipment.disposal_reason }}</small></div>
-                {% endif %}
-                {% endif %}
-              </div>
+              <span class="eq-field__label">Quantity</span>
+              <div class="eq-field__value">{{ equipment.quantity }} {{ equipment.unit }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="eq-section">
+        <div class="eq-section__head">
+          <h2 class="eq-section__title"><i class="bi bi-receipt"></i> Acquisition</h2>
+        </div>
+        <div class="eq-section__body">
+          <div class="eq-fields">
+            <div class="eq-field">
+              <span class="eq-field__label">Purchase date</span>
+              <div class="eq-field__value">{% if equipment.purchase_date %}{{ equipment.purchase_date|date:"M j, Y" }}{% else %}—{% endif %}</div>
             </div>
             <div class="eq-field">
-              <span class="eq-field__label">Location</span>
-              <div class="eq-field__value">{{ equipment.display_location }}</div>
+              <span class="eq-field__label">Acquisition cost</span>
+              <div class="eq-field__value fw-semibold">{{ equipment.acquisition_cost|peso }}</div>
             </div>
             <div class="eq-field">
-              <span class="eq-field__label">Assigned User</span>
-              <div class="eq-field__value">
-                {% if assign_form %}
-                <form
-                  method="post"
-                  action="{% url 'equipment:assign_user' equipment.pk %}"
-                  class="js-equipment-update-form"
-                  data-loading-title="Updating assigned user"
-                  data-loading-hint="Saving assignment, syncing QR code, and refreshing the page."
-                  data-loading-steps="Saving assigned user|Updating QR code|Refreshing equipment details">
-                  {% csrf_token %}
-                  <div class="eq-inline-form">
-                    {{ assign_form.assigned_user }}
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-person-check"></i> Save</button>
-                  </div>
-                </form>
-                {% else %}
-                {{ equipment.assigned_user|default:"Unassigned" }}
-                {% endif %}
-              </div>
+              <span class="eq-field__label">Fund source</span>
+              <div class="eq-field__value">{{ equipment.fund_source|default:equipment.fund|default:"—" }}</div>
             </div>
             <div class="eq-field">
               <span class="eq-field__label">Supplier</span>
@@ -364,16 +453,32 @@
               </div>
             </div>
             <div class="eq-field">
-              <span class="eq-field__label">Mode of Procurement</span>
+              <span class="eq-field__label">Mode of procurement</span>
               <div class="eq-field__value">{{ equipment.mode_of_procurement|default:"—" }}</div>
             </div>
             <div class="eq-field">
-              <span class="eq-field__label">Quantity / Unit</span>
-              <div class="eq-field__value">{{ equipment.quantity }} {{ equipment.unit }}</div>
+              <span class="eq-field__label">Payment method</span>
+              <div class="eq-field__value">{{ equipment.payment_method|default:"—" }}</div>
             </div>
             <div class="eq-field">
-              <span class="eq-field__label">Fund Source</span>
-              <div class="eq-field__value">{{ equipment.fund_source|default:equipment.fund|default:"—" }}</div>
+              <span class="eq-field__label">P.O. number</span>
+              <div class="eq-field__value">{{ equipment.display_purchase_order_no }}</div>
+            </div>
+            <div class="eq-field">
+              <span class="eq-field__label">Useful life</span>
+              <div class="eq-field__value">{{ equipment.estimated_useful_life }} years</div>
+            </div>
+            <div class="eq-field">
+              <span class="eq-field__label">COA classification</span>
+              <div class="eq-field__value">{{ equipment.classification|classification_badge }}</div>
+            </div>
+            <div class="eq-field">
+              <span class="eq-field__label">Account code</span>
+              <div class="eq-field__value">{{ equipment.coa_account_code|default:"—" }}</div>
+            </div>
+            <div class="eq-field">
+              <span class="eq-field__label">Warranty until</span>
+              <div class="eq-field__value">{% if equipment.warranty_until %}{{ equipment.warranty_until|date:"M j, Y" }}{% else %}—{% endif %}</div>
             </div>
           </div>
         </div>
@@ -383,7 +488,7 @@
       <!-- Registration Group (multi-unit create) -->
       <div class="eq-section">
         <div class="eq-section__head">
-          <h2 class="eq-section__title">Registration Group</h2>
+          <h2 class="eq-section__title"><i class="bi bi-collection"></i> Registration group</h2>
           <a href="{% url 'equipment:list' %}?batch={{ registration_batch.batch_id }}"
              class="btn btn-sm btn-outline-primary">
             <i class="bi bi-collection me-1"></i>View all units
@@ -430,33 +535,10 @@
       </div>
       {% endif %}
 
-      <!-- COA Classification -->
-      <div class="eq-section">
-        <div class="eq-section__head">
-          <h2 class="eq-section__title">COA Classification</h2>
-        </div>
-        <div class="eq-section__body">
-          <div class="eq-fields eq-fields--3">
-            <div class="eq-field">
-              <span class="eq-field__label">Classification</span>
-              <div class="eq-field__value">{{ equipment.classification|classification_badge }}</div>
-            </div>
-            <div class="eq-field">
-              <span class="eq-field__label">Acquisition Cost</span>
-              <div class="eq-field__value fw-semibold">{{ equipment.acquisition_cost|peso }}</div>
-            </div>
-            <div class="eq-field">
-              <span class="eq-field__label">Useful Life</span>
-              <div class="eq-field__value">{{ equipment.estimated_useful_life }} years</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {% if equipment.classification == 'PPE' %}
       <div class="eq-section">
         <div class="eq-section__head">
-          <h2 class="eq-section__title">Property Acknowledgment Receipt</h2>
+          <h2 class="eq-section__title"><i class="bi bi-file-earmark-text"></i> Property acknowledgment receipt</h2>
           {% if active_par %}
           <a href="{% url 'reports:par_print' active_par.pk %}" class="btn btn-sm btn-primary">
             <i class="bi bi-download me-1"></i>Download PAR
@@ -515,7 +597,7 @@
       {% if equipment.classification != 'PPE' %}
       <div class="eq-section">
         <div class="eq-section__head">
-          <h2 class="eq-section__title">Inventory Custodian Slip</h2>
+          <h2 class="eq-section__title"><i class="bi bi-file-earmark-ruled"></i> Inventory custodian slip</h2>
           {% if active_ics %}
           <a href="{% url 'reports:ics_print' active_ics.pk %}" class="btn btn-sm btn-primary">
             <i class="bi bi-download me-1"></i>Download ICS
@@ -606,7 +688,7 @@
       <!-- Assignment History -->
       <div class="eq-section">
         <div class="eq-section__head">
-          <h2 class="eq-section__title">Assignment History</h2>
+          <h2 class="eq-section__title"><i class="bi bi-clock-history"></i> Assignment history</h2>
         </div>
         <div class="table-responsive">
           <table class="table table-hover mb-0">
@@ -638,26 +720,68 @@
 
     </div>
 
-    <!-- QR sidebar -->
-    <div class="col-lg-4 d-none" id="equipment-qr-sidebar">
+    <aside class="eq-side">
+      {% if property_status_form or assign_form %}
+      <div class="eq-section">
+        <div class="eq-section__head">
+          <h2 class="eq-section__title"><i class="bi bi-pencil-square"></i> Update</h2>
+        </div>
+        <div class="eq-section__body">
+          {% if property_status_form %}
+          <form
+            method="post"
+            action="{% url 'equipment:update_property_status' equipment.pk %}"
+            id="propertyStatusUpdateForm"
+            class="eq-update js-equipment-update-form"
+            data-loading-title="Updating property status"
+            data-loading-hint="Saving status, syncing QR code, and refreshing the page."
+            data-loading-steps="Saving property status|Updating QR code|Refreshing equipment details">
+            {% csrf_token %}
+            <label class="eq-field__label" for="propertyStatusSelect">Property status</label>
+            {{ property_status_form.property_status }}
+            <div id="disposalReasonGroup" class="mt-3{% if not show_disposal_reason %} d-none{% endif %}">
+              <label class="eq-field__label mb-1" for="disposalReasonSelect">Disposal reason</label>
+              {{ property_status_form.disposal_reason }}
+              {% if property_status_form.disposal_reason.errors %}
+              <div class="text-danger small mt-1">{{ property_status_form.disposal_reason.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Save status</button>
+          </form>
+          {% endif %}
+          {% if assign_form %}
+          <form
+            method="post"
+            action="{% url 'equipment:assign_user' equipment.pk %}"
+            class="eq-update js-equipment-update-form"
+            data-loading-title="Updating assigned user"
+            data-loading-hint="Saving assignment, syncing QR code, and refreshing the page."
+            data-loading-steps="Saving assigned user|Updating QR code|Refreshing equipment details">
+            {% csrf_token %}
+            <label class="eq-field__label" for="{{ assign_form.assigned_user.id_for_label }}">Assigned user</label>
+            {{ assign_form.assigned_user }}
+            <button type="submit" class="btn btn-primary"><i class="bi bi-person-check me-1"></i>Save assignment</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
       {% if qr_code_data %}
-      <div class="eq-qr-card">
+      <div class="eq-qr-card" id="equipment-qr-sidebar">
         <div class="eq-qr-card__head">
-          <span>QR Code</span>
-          <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" id="qr-hide-btn" title="Hide QR Code">
-            <i class="bi bi-x-lg"></i>
-          </button>
+          <span><i class="bi bi-qr-code me-1"></i> QR code</span>
         </div>
         <div class="eq-qr-card__body">
-          <img src="{{ qr_code_data }}" alt="QR Code" class="img-fluid">
+          <img src="{{ qr_code_data }}" alt="QR code for {{ equipment.property_number }}">
           <div class="eq-qr-card__caption">
             <code class="prop-chip">{{ equipment.property_number }}</code>
-            <div class="mt-1">Updates automatically when details change.</div>
+            <div class="mt-1">Scan to open this property record.</div>
           </div>
         </div>
       </div>
       {% endif %}
-    </div>
+    </aside>
 
   </div>
 </div>
@@ -704,6 +828,19 @@
 
 {% block extra_js %}
 <script>
+document.querySelectorAll('.eq-copy').forEach(function (button) {
+  button.addEventListener('click', function () {
+    const value = button.getAttribute('data-copy') || '';
+    if (!value || !navigator.clipboard) return;
+    navigator.clipboard.writeText(value).then(function () {
+      button.innerHTML = '<i class="bi bi-check-lg"></i>';
+      window.setTimeout(function () {
+        button.innerHTML = '<i class="bi bi-clipboard"></i>';
+      }, 1200);
+    });
+  });
+});
+
 (function () {
   const printModalEl = document.getElementById('inventoryTagPrintModal');
   const printNameEl = document.getElementById('inventory-tag-print-name');
@@ -767,28 +904,6 @@
       });
       pendingPrintUrl = '';
     });
-  }
-
-  const sidebar = document.getElementById('equipment-qr-sidebar');
-  const main = document.getElementById('equipment-main');
-  const toggleBtn = document.getElementById('qr-toggle-btn');
-  const hideBtn = document.getElementById('qr-hide-btn');
-  if (!sidebar || !main || !toggleBtn) return;
-
-  function setQrVisible(visible) {
-    sidebar.classList.toggle('d-none', !visible);
-    main.classList.toggle('col-lg-8', visible);
-    main.classList.toggle('col-12', !visible);
-    toggleBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
-    toggleBtn.querySelector('.qr-toggle-label').textContent = visible ? 'Hide QR' : 'QR Code';
-  }
-
-  setQrVisible(false);
-  toggleBtn.addEventListener('click', function () {
-    setQrVisible(sidebar.classList.contains('d-none'));
-  });
-  if (hideBtn) {
-    hideBtn.addEventListener('click', function () { setQrVisible(false); });
   }
 })();
 

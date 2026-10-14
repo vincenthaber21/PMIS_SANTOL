@@ -13,16 +13,16 @@
     padding: 1.5rem 1.75rem;
     margin-bottom: 1.5rem;
     background:
-      linear-gradient(135deg, #001a5e 0%, #003087 48%, #1a56db 100%);
+      linear-gradient(135deg, #100838 0%, #1B1464 48%, #3D2E9E 100%);
     color: #fff;
-    box-shadow: 0 10px 28px rgba(0, 48, 135, 0.22);
+    box-shadow: 0 10px 28px rgba(27, 20, 100, 0.22);
   }
   .dash-hero::before {
     content: '';
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(ellipse 55% 80% at 100% 0%, rgba(255, 199, 44, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 80% at 100% 0%, rgba(230, 192, 74, 0.20) 0%, transparent 55%),
       radial-gradient(ellipse 40% 60% at 0% 100%, rgba(255, 255, 255, 0.07) 0%, transparent 50%);
     pointer-events: none;
   }
@@ -36,26 +36,27 @@
     gap: 1.25rem;
   }
   .dash-hero-greeting {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     font-weight: 600;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.65);
-    margin-bottom: 0.35rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.4rem;
   }
   .dash-hero h1 {
-    font-size: 1.55rem;
+    font-size: 1.85rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     margin: 0;
     color: #fff;
-    line-height: 1.25;
+    line-height: 1.2;
   }
   .dash-hero-sub {
-    margin: 0.4rem 0 0;
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.78);
-    max-width: 36rem;
+    margin: 0.5rem 0 0;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.82);
+    max-width: 40rem;
+    line-height: 1.45;
   }
   .dash-hero-meta {
     display: flex;
@@ -67,59 +68,102 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    padding: 0.4rem 0.75rem;
+    padding: 0.45rem 0.85rem;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     font-weight: 500;
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.18);
     color: rgba(255, 255, 255, 0.92);
   }
-  .dash-chip strong { color: #FFC72C; font-weight: 600; }
+  .dash-chip strong { color: #E6C04A; font-weight: 600; }
   .dash-chip i { opacity: 0.9; }
 
-  .filter-panel {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(8px);
-    border-radius: 12px;
-    padding: 0.85rem 1rem;
+  .dash-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.05rem;
   }
-  .filter-panel .form-label {
-    color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 0.3rem;
+  .dash-actions .btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
   }
-  .filter-panel .form-select,
-  .filter-panel .form-control {
-    background: rgba(255, 255, 255, 0.95);
-    border-color: transparent;
-    min-width: 9rem;
-  }
-  .filter-panel .btn-primary {
-    background: #FFC72C;
-    border-color: #FFC72C;
-    color: #001a5e;
+  .dash-actions .btn-gold {
+    background: #E6C04A;
+    border: 1px solid #E6C04A;
+    color: #140C48;
     font-weight: 600;
   }
-  .filter-panel .btn-primary:hover,
-  .filter-panel .btn-primary:focus {
-    background: #ffd65c;
-    border-color: #ffd65c;
-    color: #001a5e;
+  .dash-actions .btn-gold:hover {
+    background: #f0d06a;
+    border-color: #f0d06a;
+    color: #140C48;
   }
-  .filter-panel .btn-outline-secondary {
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.4);
-    background: transparent;
-  }
-  .filter-panel .btn-outline-secondary:hover {
+  .dash-actions .btn-ghost {
     background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.28);
     color: #fff;
+  }
+  .dash-actions .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+
+  .dash-filter {
+    background: #fff;
+    border: 1px solid #e6e2f0;
+    border-radius: 14px;
+    padding: 1rem 1.15rem;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  }
+  .dash-filter .form-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-bottom: 0.35rem;
+  }
+  .dash-filter .form-select,
+  .dash-filter .form-control {
+    min-height: 44px;
+    min-width: 10rem;
+    font-size: 0.95rem;
+  }
+  .dash-filter .btn {
+    min-height: 44px;
+    padding: 0.5rem 1.1rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
   }
 
   /* KPI upgrades */
-  .kpi-card { height: 100%; }
+  .dash-page .section-title {
+    font-size: 0.85rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+  }
+  .kpi-link {
+    display: block;
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+  }
+  .kpi-link:focus-visible .kpi-card {
+    outline: 3px solid var(--primary);
+    outline-offset: 2px;
+  }
+  .dash-kpis .kpi-card { height: 100%; padding: 1.3rem 1.3rem 1.25rem 1.5rem; }
+  .dash-kpis .kpi-label { font-size: 0.8rem; }
+  .dash-kpis .kpi-value { font-size: 2.15rem; }
+  .dash-kpis .kpi-icon { width: 46px; height: 46px; font-size: 1.3rem; }
+  .dash-kpis .kpi-caption { font-size: 0.85rem; }
   .dash-kpis > [class*="col-"] {
     animation: dashFadeUp 0.45s ease both;
   }
@@ -135,7 +179,7 @@
     margin-top: 0.15rem;
   }
   .kpi-pct {
-    font-size: 0.78rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: #64748B;
     white-space: nowrap;
@@ -176,19 +220,21 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-weight: 600;
-    color: #0f172a;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--primary);
   }
+  .dash-analytics .card-subtitle { font-size: 0.85rem; }
   .chart-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: var(--brand-surface);
     color: var(--primary);
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     flex-shrink: 0;
   }
   .chart-empty {
@@ -221,20 +267,17 @@
       padding: 1.25rem 1.15rem;
       border-radius: 14px;
     }
-    .dash-hero h1 { font-size: 1.3rem; }
-    .filter-panel {
-      width: 100%;
-    }
-    .filter-panel > div:not(.d-flex) {
+    .dash-hero h1 { font-size: 1.45rem; }
+    .dash-filter { width: 100%; }
+    .dash-filter > div:not(.d-flex) {
       flex: 1 1 calc(50% - 0.5rem);
       min-width: calc(50% - 0.5rem);
     }
-    .filter-panel > .d-flex {
+    .dash-filter > .d-flex {
       width: 100%;
-      justify-content: flex-end;
     }
-    .filter-panel .form-select,
-    .filter-panel .form-control {
+    .dash-filter .form-select,
+    .dash-filter .form-control {
       min-width: 0;
       width: 100%;
     }
@@ -247,6 +290,7 @@
 {% widthratio disposed total_property 100 as disposed_pct %}
 {% widthratio unserviceable total_property 100 as unserviceable_pct %}
 
+<div class="dash-page">
 <section class="dash-hero" aria-label="Dashboard welcome">
   <div class="dash-hero-inner">
     <div>
@@ -272,42 +316,58 @@
           {{ total_property }} total item{{ total_property|pluralize }}
         </span>
       </div>
+      <div class="dash-actions">
+        <a href="{% url 'equipment:list' %}" class="btn btn-ghost">
+          <i class="bi bi-pc-display me-1"></i>View inventory
+        </a>
+        {% if user.is_admin or user.is_custodian %}
+        <a href="{% url 'equipment:create' %}" class="btn btn-gold">
+          <i class="bi bi-plus-lg me-1"></i>Register equipment
+        </a>
+        {% endif %}
+        {% if user.can_access_insights %}
+        <a href="{% url 'reports:index' %}" class="btn btn-ghost">
+          <i class="bi bi-file-earmark-text me-1"></i>Reports
+        </a>
+        {% endif %}
+      </div>
     </div>
-
-    <form method="get" id="dashboard-filter" class="filter-panel d-flex flex-wrap align-items-end gap-2">
-      <div>
-        <label for="period-select" class="form-label small mb-1">Period</label>
-        <select name="period" id="period-select" class="form-select form-select-sm">
-          <option value="all"   {% if period == 'all' %}selected{% endif %}>All time</option>
-          <option value="week"  {% if period == 'week' %}selected{% endif %}>Week</option>
-          <option value="month" {% if period == 'month' %}selected{% endif %}>Month</option>
-          <option value="year"  {% if period == 'year' %}selected{% endif %}>Year</option>
-        </select>
-      </div>
-      <div data-period-input="week" {% if period != 'week' %}hidden{% endif %}>
-        <label for="filter-week" class="form-label small mb-1">Select week</label>
-        <input type="week" id="filter-week" name="week" value="{{ period_value_week }}" class="form-control form-control-sm">
-      </div>
-      <div data-period-input="month" {% if period != 'month' %}hidden{% endif %}>
-        <label for="filter-month" class="form-label small mb-1">Select month</label>
-        <input type="month" id="filter-month" name="month" value="{{ period_value_month }}" class="form-control form-control-sm">
-      </div>
-      <div data-period-input="year" {% if period != 'year' %}hidden{% endif %}>
-        <label for="filter-year" class="form-label small mb-1">Select year</label>
-        <input type="number" id="filter-year" name="year" min="2000" max="2100" value="{{ period_value_year }}" class="form-control form-control-sm" style="width:110px;">
-      </div>
-      <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-        {% if period != 'all' %}<a href="?period=all" class="btn btn-outline-secondary btn-sm">Reset</a>{% endif %}
-      </div>
-    </form>
   </div>
 </section>
+
+<form method="get" id="dashboard-filter" class="dash-filter d-flex flex-wrap align-items-end gap-3">
+  <div>
+    <label for="period-select" class="form-label">Period</label>
+    <select name="period" id="period-select" class="form-select">
+      <option value="all"   {% if period == 'all' %}selected{% endif %}>All time</option>
+      <option value="week"  {% if period == 'week' %}selected{% endif %}>Week</option>
+      <option value="month" {% if period == 'month' %}selected{% endif %}>Month</option>
+      <option value="year"  {% if period == 'year' %}selected{% endif %}>Year</option>
+    </select>
+  </div>
+  <div data-period-input="week" {% if period != 'week' %}hidden{% endif %}>
+    <label for="filter-week" class="form-label">Select week</label>
+    <input type="week" id="filter-week" name="week" value="{{ period_value_week }}" class="form-control">
+  </div>
+  <div data-period-input="month" {% if period != 'month' %}hidden{% endif %}>
+    <label for="filter-month" class="form-label">Select month</label>
+    <input type="month" id="filter-month" name="month" value="{{ period_value_month }}" class="form-control">
+  </div>
+  <div data-period-input="year" {% if period != 'year' %}hidden{% endif %}>
+    <label for="filter-year" class="form-label">Select year</label>
+    <input type="number" id="filter-year" name="year" min="2000" max="2100" value="{{ period_value_year }}" class="form-control" style="width:8rem;">
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <button type="submit" class="btn btn-primary">Apply</button>
+    {% if period != 'all' %}<a href="?period=all" class="btn btn-outline-secondary">Reset</a>{% endif %}
+  </div>
+</form>
 
 <!-- Property Condition -->
 <div class="section-title"><i class="bi bi-clipboard2-check"></i> Property Condition</div>
 <div class="row g-3 mb-4 dash-kpis">
   <div class="col-6 col-md-3">
+    <a class="kpi-link" href="{% url 'equipment:list' %}">
     <div class="kpi-card" style="--kpi-accent:var(--primary);">
       <div class="kpi-top">
         <span class="kpi-label">Total Property</span>
@@ -318,10 +378,12 @@
         <span class="kpi-pct">100%</span>
       </div>
       <div class="kpi-track"><span style="width:100%"></span></div>
-      <div class="kpi-caption">All registered items in scope</div>
+      <div class="kpi-caption">Open the full inventory</div>
     </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
+    <a class="kpi-link" href="{% url 'equipment:list' %}{% if status_links.Working %}?property_status={{ status_links.Working }}{% endif %}">
     <div class="kpi-card" style="--kpi-accent:#059669;">
       <div class="kpi-top">
         <span class="kpi-label">Working</span>
@@ -332,10 +394,12 @@
         <span class="kpi-pct">{{ working_pct|default:0 }}%</span>
       </div>
       <div class="kpi-track"><span style="width:{{ working_pct|default:0 }}%"></span></div>
-      <div class="kpi-caption">Serviceable and in use</div>
+      <div class="kpi-caption">View working items</div>
     </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
+    <a class="kpi-link" href="{% url 'equipment:list' %}{% if status_links.Disposed %}?property_status={{ status_links.Disposed }}{% endif %}">
     <div class="kpi-card" style="--kpi-accent:#DC2626;">
       <div class="kpi-top">
         <span class="kpi-label">Disposed</span>
@@ -346,10 +410,12 @@
         <span class="kpi-pct">{{ disposed_pct|default:0 }}%</span>
       </div>
       <div class="kpi-track"><span style="width:{{ disposed_pct|default:0 }}%"></span></div>
-      <div class="kpi-caption">Removed from active inventory</div>
+      <div class="kpi-caption">View disposed items</div>
     </div>
+    </a>
   </div>
   <div class="col-6 col-md-3">
+    <a class="kpi-link" href="{% url 'equipment:list' %}{% if status_links.Unserviceable %}?property_status={{ status_links.Unserviceable }}{% endif %}">
     <div class="kpi-card" style="--kpi-accent:#D97706;">
       <div class="kpi-top">
         <span class="kpi-label">Unserviceable</span>
@@ -360,8 +426,9 @@
         <span class="kpi-pct">{{ unserviceable_pct|default:0 }}%</span>
       </div>
       <div class="kpi-track"><span style="width:{{ unserviceable_pct|default:0 }}%"></span></div>
-      <div class="kpi-caption">Needs repair or evaluation</div>
+      <div class="kpi-caption">View items that need attention</div>
     </div>
+    </a>
   </div>
 </div>
 
@@ -445,6 +512,7 @@
     </div>
   </div>
 </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -506,7 +574,7 @@ const doughnutChartOptions = {
     legend: {
       position: 'bottom',
       labels: {
-        font: { ...chartFont, size: 11 },
+        font: { ...chartFont, size: 13 },
         padding: 14,
         usePointStyle: true,
         pointStyle: 'circle',
@@ -560,21 +628,21 @@ new Chart(document.getElementById('registrationTrendChart'), {
     datasets: [{
       label: trendDatasetLabel,
       data: trendValues,
-      borderColor: '#003087',
+      borderColor: '#1B1464',
       backgroundColor: (ctx) => {
         const chart = ctx.chart;
         const { ctx: c, chartArea } = chart;
-        if (!chartArea) return 'rgba(0, 48, 135, 0.12)';
+        if (!chartArea) return 'rgba(27, 20, 100, 0.12)';
         const g = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-        g.addColorStop(0, 'rgba(0, 48, 135, 0.22)');
-        g.addColorStop(1, 'rgba(0, 48, 135, 0.02)');
+        g.addColorStop(0, 'rgba(27, 20, 100, 0.22)');
+        g.addColorStop(1, 'rgba(27, 20, 100, 0.02)');
         return g;
       },
       tension: 0.4,
       fill: true,
       pointRadius: 3,
       pointHoverRadius: 5,
-      pointBackgroundColor: '#003087',
+      pointBackgroundColor: '#1B1464',
       pointBorderColor: '#fff',
       pointBorderWidth: 2,
       borderWidth: 2.5,
@@ -618,8 +686,8 @@ new Chart(document.getElementById('officeChart'), {
     datasets: [{
       label: 'Properties',
       data: officeChartData.data,
-      backgroundColor: 'rgba(0, 48, 135, 0.8)',
-      hoverBackgroundColor: 'rgba(0, 48, 135, 0.95)',
+      backgroundColor: 'rgba(27, 20, 100, 0.82)',
+      hoverBackgroundColor: 'rgba(27, 20, 100, 0.95)',
       borderRadius: 6,
       borderSkipped: false,
       maxBarThickness: 28,

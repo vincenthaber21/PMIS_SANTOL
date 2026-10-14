@@ -201,6 +201,13 @@ def dashboard(request):
         'data': [row['count'] for row in category_data],
     }
 
+    status_links = {
+        row['name']: row['pk']
+        for row in PropertyStatus.objects.filter(
+            name__in=['Working', PropertyStatus.DISPOSE_STATUS, 'Unserviceable'],
+        ).values('name', 'pk')
+    }
+
     context = {
         'total_equipment': total_equipment,
         'available': available,
@@ -209,6 +216,7 @@ def dashboard(request):
         'working': working,
         'disposed': disposed,
         'unserviceable': unserviceable,
+        'status_links': status_links,
         'property_status_data': json.dumps(property_status_data),
         'trend_labels': json.dumps(trend_labels),
         'trend_values': json.dumps(trend_values),

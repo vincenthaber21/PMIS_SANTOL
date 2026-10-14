@@ -1,0 +1,105 @@
+/* PMS brand theme — Municipality of Santol seal colors */
+:root {
+  --brand: #1B1464;
+  --primary: #1B1464;
+  --accent: #3D2E9E;
+  --accent-hover: #140C48;
+  --accent-light: #6B5BD0;
+  --header-bg: #1B1464;
+  --sidebar-bg: #1B1464;
+  --sidebar-text: #e6e0f5;
+  --sidebar-hover: #E6C04A;
+  --sidebar-active-bg: rgba(230, 192, 74, 0.18);
+  --brand-surface: #F4F1FA;
+  --brand-surface-border: #D5CDE8;
+  --brand-surface-text: #140C48;
+  --focus-ring: rgba(27, 20, 100, 0.22);
+  --chart-brand: #1B1464;
+  --chart-brand-light: rgba(27, 20, 100, 0.12);
+  --seal-gold: #E6C04A;
+  --seal-green: #3F6B48;
+  --seal-red: #9A3B3A;
+
+  --bs-primary: #1B1464;
+  --bs-primary-rgb: 27, 20, 100;
+  --bs-link-color: #3D2E9E;
+  --bs-link-hover-color: #1B1464;
+  --bs-focus-ring-color: rgba(27, 20, 100, 0.25);
+  --bs-btn-focus-box-shadow: 0 0 0 0.25rem rgba(27, 20, 100, 0.25);
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #3D2E9E;
+  --bs-btn-border-color: #3D2E9E;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #1B1464;
+  --bs-btn-hover-border-color: #1B1464;
+  --bs-btn-focus-shadow-rgb: 27, 20, 100;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #140C48;
+  --bs-btn-active-border-color: #140C48;
+  --bs-btn-disabled-color: #fff;
+  --bs-btn-disabled-bg: #3D2E9E;
+  --bs-btn-disabled-border-color: #3D2E9E;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: #1B1464;
+  --bs-btn-border-color: #3D2E9E;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #3D2E9E;
+  --bs-btn-hover-border-color: #3D2E9E;
+  --bs-btn-focus-shadow-rgb: 27, 20, 100;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #1B1464;
+  --bs-btn-active-border-color: #1B1464;
+}
+
+.pagination {
+  --bs-pagination-color: #1B1464;
+  --bs-pagination-hover-color: #1B1464;
+  --bs-pagination-hover-bg: #F4F1FA;
+  --bs-pagination-hover-border-color: #D5CDE8;
+  --bs-pagination-focus-color: #1B1464;
+  --bs-pagination-active-color: #fff;
+  --bs-pagination-active-bg: #3D2E9E;
+  --bs-pagination-active-border-color: #3D2E9E;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #3D2E9E;
+  box-shadow: 0 0 0 0.25rem rgba(27, 20, 100, 0.2);
+}
+
+.form-check-input:checked {
+  background-color: #1B1464;
+  border-color: #1B1464;
+}
+
+.form-check-input:focus {
+  border-color: #3D2E9E;
+  box-shadow: 0 0 0 0.25rem rgba(27, 20, 100, 0.25);
+}
+
+.text-primary { color: #1B1464 !important; }
+.bg-primary { background-color: #3D2E9E !important; }
+.border-primary { border-color: #3D2E9E !important; }
+.link-primary {
+  color: #3D2E9E !important;
+  text-decoration-color: rgba(61, 46, 158, 0.5) !important;
+}
+.link-primary:hover,
+.link-primary:focus {
+  color: #1B1464 !important;
+}
+
+.brand-logo-img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #fff;
+}
