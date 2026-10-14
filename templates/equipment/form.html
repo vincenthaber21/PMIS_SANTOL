@@ -12,6 +12,8 @@
     padding: 1.5rem;
     margin-bottom: 1.25rem;
     box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+    min-width: 0;
+    max-width: 100%;
   }
   .form-section-title {
     display: flex; align-items: center; gap: 0.6rem;
@@ -55,7 +57,10 @@
     border: 1px solid #e8eef5;
     border-radius: 12px;
     overflow: hidden;
+    max-width: 100%;
+    min-width: 0;
   }
+  .pn-panel__toggle { max-width: 100%; min-width: 0; }
   .pn-panel__toggle {
     display: flex;
     align-items: center;
@@ -79,6 +84,11 @@
     align-items: center;
     gap: 0.65rem;
     min-width: 0;
+    flex: 1;
+  }
+  .pn-panel__copy {
+    min-width: 0;
+    flex: 1;
   }
   .pn-panel__icon {
     display: inline-flex;
@@ -102,9 +112,8 @@
     font-size: 0.78rem;
     color: #64748b;
     margin: 0.1rem 0 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .pn-panel__meta code {
     font-size: 0.78rem;
@@ -186,7 +195,7 @@
                       aria-expanded="false" aria-controls="propertyNumberBody">
                 <span class="pn-panel__toggle-main">
                   <span class="pn-panel__icon" aria-hidden="true"><i class="bi bi-upc-scan"></i></span>
-                  <span>
+                  <span class="pn-panel__copy">
                     <span class="pn-panel__title">Property Number <span class="text-danger">*</span></span>
                     <p class="pn-panel__meta" id="propertyNumberSummary">
                       {% if is_create %}
@@ -212,6 +221,11 @@
                 </div>
                 <div class="pn-panel__hint" id="propertyNumberHint">
                   Each unit gets its own property number for individual accountability.
+                  {% if site_settings.property_number_use_legacy_lgu_code %}
+                  Prefix follows Site settings: {{ site_settings.property_number_lgu_code }}.
+                  {% else %}
+                  Using the normal form number (PAR, ICS, SPC, or SPLC).
+                  {% endif %}
                 </div>
                 {% else %}
                 <label class="form-label visually-hidden" for="id_property_number">Property Number</label>
@@ -831,7 +845,7 @@
     input.className = 'form-control';
     input.readOnly = true;
     input.value = value || '';
-    input.placeholder = 'LGU-SANTOL-000-0000-XX-0000';
+    input.placeholder = 'PAR-000-0000-XX-0000';
     input.id = inputId;
     if (index === 0) {
       input.name = 'property_number';

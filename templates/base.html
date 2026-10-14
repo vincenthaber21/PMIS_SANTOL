@@ -313,15 +313,77 @@
       font-weight: 600; font-size: 0.875rem; cursor: pointer;
     }
 
-    /* Main content */
+    /* Main content — always the strip beside the sidebar, on every page */
     #main-content {
       margin-left: var(--sidebar-width);
       padding-top: var(--topbar-height);
       min-height: 100vh;
+      min-height: 100dvh;
+      min-width: 0;
       display: flex;
       flex-direction: column;
+      container-type: inline-size;
+      container-name: pms-main;
     }
-    .page-wrapper { padding: 1.75rem 2rem; flex: 1; }
+    .page-wrapper {
+      padding: 1.75rem 2rem;
+      flex: 1;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .page-wrapper .row,
+    .page-wrapper .card,
+    .page-wrapper form,
+    .page-wrapper .table-responsive {
+      min-width: 0;
+      max-width: 100%;
+    }
+    .page-wrapper .row > [class*="col-"] {
+      min-width: 0;
+    }
+    .page-wrapper .form-control,
+    .page-wrapper .form-select,
+    .page-wrapper .input-group {
+      max-width: 100%;
+    }
+    .page-wrapper .input-group > .form-control,
+    .page-wrapper .input-group > .form-select {
+      min-width: 0;
+      width: 1%;
+    }
+
+    /*
+      Bootstrap columns follow the browser window, not the area left of the sidebar.
+      Reflow every page from the real content width so fields stay on screen.
+    */
+    @container pms-main (max-width: 1100px) {
+      .page-wrapper .row > .col-md-2,
+      .page-wrapper .row > .col-md-3,
+      .page-wrapper .row > .col-md-4,
+      .page-wrapper .row > .col-md-5,
+      .page-wrapper .row > .col-lg-2,
+      .page-wrapper .row > .col-lg-3,
+      .page-wrapper .row > .col-lg-4,
+      .page-wrapper .row > .col-lg-5,
+      .page-wrapper .row > .col-xl-2,
+      .page-wrapper .row > .col-xl-3,
+      .page-wrapper .row > .col-xl-4,
+      .page-wrapper .row > .col-xl-5 {
+        width: 50%;
+      }
+      .eq-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .eq-fields--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @container pms-main (max-width: 560px) {
+      .page-wrapper .row > [class*="col-md-"],
+      .page-wrapper .row > [class*="col-lg-"],
+      .page-wrapper .row > [class*="col-xl-"] {
+        width: 100%;
+      }
+      .eq-stats,
+      .eq-fields,
+      .eq-fields--3 { grid-template-columns: 1fr; }
+    }
     .page-header { margin-bottom: 1.5rem; }
     .page-header h1 { font-size: 1.5rem; font-weight: 700; color: var(--primary); margin: 0; }
     .page-header .breadcrumb { font-size: 0.8rem; color: #9CA3AF; margin: 0; }
@@ -571,7 +633,7 @@
         box-shadow: 4px 0 24px rgba(0, 0, 0, 0.18);
       }
       #topbar { left: 0; }
-      #main-content { margin-left: 0; }
+      #main-content { margin-left: 0; width: 100%; max-width: 100%; }
       .page-wrapper { padding: 1.25rem 1.25rem; }
       #site-footer { padding: 0.85rem 1.25rem; }
       .chart-container-fixed { height: 280px; min-height: 280px; }
@@ -659,6 +721,24 @@
     }
   </style>
   {% block extra_css %}{% endblock %}
+  <style>
+    /* Loaded last so every page fits the area beside the sidebar */
+    @container pms-main (max-width: 1100px) {
+      #main-content .eq-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #main-content .eq-fields--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #main-content [class*="filter-grid"] { grid-template-columns: 1fr 1fr; }
+    }
+    @container pms-main (max-width: 860px) {
+      #main-content .eq-layout { grid-template-columns: 1fr; }
+      #main-content .eq-side { order: -1; position: static; }
+    }
+    @container pms-main (max-width: 560px) {
+      #main-content .eq-stats,
+      #main-content .eq-fields,
+      #main-content .eq-fields--3 { grid-template-columns: 1fr; }
+      #main-content [class*="filter-grid"] { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 {% if user.is_authenticated %}

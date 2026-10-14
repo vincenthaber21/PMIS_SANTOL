@@ -117,14 +117,6 @@
   row.appendChild(hintEl);
   toggleField.appendChild(row);
 
-  function municipalityExample() {
-    const municipalityField = document.getElementById('id_lgu_municipality');
-    const name = municipalityField && municipalityField.value
-      ? municipalityField.value.trim().replace(/\b\w/g, function (c) { return c.toUpperCase(); })
-      : 'Sudipen';
-    return 'LGU-' + name;
-  }
-
   function codeExample() {
     const codeField = document.getElementById('id_property_number_lgu_code');
     return codeField && codeField.value ? codeField.value.trim() : '0621';
@@ -138,16 +130,14 @@
       hintEl.textContent = 'Property numbers: ' + codeExample() + '-201-2027-PR-0001';
       if (codeRow) codeRow.classList.add('legacy-mode-active');
     } else {
-      hintEl.textContent = 'Property numbers: ' + municipalityExample() + '-201-2027-PR-0001';
+      hintEl.textContent = 'Property numbers: PAR-201-2027-PR-0001';
       if (codeRow) codeRow.classList.remove('legacy-mode-active');
     }
   }
 
   checkbox.addEventListener('change', syncToggle);
   const codeField = document.getElementById('id_property_number_lgu_code');
-  const municipalityField = document.getElementById('id_lgu_municipality');
   if (codeField) codeField.addEventListener('input', syncToggle);
-  if (municipalityField) municipalityField.addEventListener('input', syncToggle);
   syncToggle();
 })();
 </script>

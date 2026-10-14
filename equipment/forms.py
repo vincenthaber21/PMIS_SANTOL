@@ -139,7 +139,7 @@ class EquipmentForm(forms.ModelForm):
             self.fields['property_number'].widget.attrs.update({
                 'class': 'form-control',
                 'readonly': 'readonly',
-                'placeholder': 'LGU-SANTOL-000-0000-XX-0000',
+                'placeholder': 'PAR-000-0000-XX-0000',
                 'id': 'id_property_number',
             })
             # Validated in clean(); readonly fields are often empty on first paint.

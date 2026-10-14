@@ -47,15 +47,14 @@ class SiteSettings(models.Model):
         verbose_name='Use legacy numeric LGU code for property numbers',
         help_text=(
             'When enabled, auto-generated property numbers start with the LGU code above '
-            '(e.g. 0621-201-2027-PR-0001 or LGU-SANTOL-201-2027-PR-0001). When disabled, '
-            'they start with LGU-{Municipality} from PAR Header '
-            '(e.g. LGU-SANTOL-201-2027-PR-0001).'
+            '(e.g. LGU-SANTOL-201-2027-PR-0001 or 0621-201-2027-PR-0001). When disabled, '
+            'they use the normal form number (e.g. PAR-201-2027-PR-0001).'
         ),
     )
     lgu_municipality = models.CharField(
         max_length=100,
         default='SUDIPEN',
-        help_text='Municipality name on PAR/ICS headers and property numbers (e.g. SUDIPEN).',
+        help_text='Municipality name printed on PAR/ICS headers (e.g. SUDIPEN).',
     )
     lgu_province = models.CharField(
         max_length=100,
@@ -175,9 +174,12 @@ class SiteSettings(models.Model):
 
     def save(self, *args, **kwargs):
         self.pk = 1
-        old_logo = ''
-        if SiteSettings.objects.filter(pk=1).exists():
-            old_logo = SiteSettings.objects.filter(pk=1).values_list('logo', flat=True).first() or ''
+        previous = SiteSettings.objects.filter(pk=1).values(
+            'logo',
+            'property_number_lgu_code',
+            'property_number_use_legacy_lgu_code',
+        ).first()
+        old_logo = (previous or {}).get('logo') or ''
         super().save(*args, **kwargs)
         from .admin_branding import invalidate_admin_branding_cache
         from .logo_image import clear_login_logo_cache
@@ -187,6 +189,16 @@ class SiteSettings(models.Model):
             clear_login_logo_cache(old_logo)
         if self.logo:
             clear_login_logo_cache(self.logo.name)
+
+        number_changed = previous is None or (
+            (previous.get('property_number_lgu_code') or '').strip()
+            != (self.property_number_lgu_code or '').strip()
+            or bool(previous.get('property_number_use_legacy_lgu_code'))
+            != bool(self.property_number_use_legacy_lgu_code)
+        )
+        if number_changed:
+            from equipment.property_number import sync_equipment_property_numbers
+            sync_equipment_property_numbers()
 
     def delete(self, *args, **kwargs):
         pass
@@ -211,12 +223,10 @@ class SiteSettings(models.Model):
 
     @property
     def property_number_prefix_segment(self):
-        """First segment of auto-generated property numbers."""
+        """LGU prefix used only when legacy mode is enabled. Empty in normal mode."""
         if self.property_number_use_legacy_lgu_code:
-            code = (self.property_number_lgu_code or '').strip()
-            if code:
-                return code
-        return self.property_number_lgu_label
+            return (self.property_number_lgu_code or '').strip()
+        return ''
 
 
 class AuditLog(models.Model):

@@ -159,12 +159,12 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 'property_number_lgu_code',
             ),
             'description': (
-                'Choose the prefix for new property numbers. When legacy mode is '
-                '<strong>disabled</strong>, numbers use <code>LGU-&#123;Municipality&#125;</code> '
-                'from the PAR Header (e.g. <code>LGU-SANTOL-201-2027-PR-0001</code>). '
-                'When <strong>enabled</strong>, they use the LGU code below — a numeric code '
-                'or a custom prefix (e.g. <code>0621-201-2027-PR-0001</code> or '
-                '<code>LGU-SANTOL-201-2027-PR-0001</code>). The LGU code is always printed on inventory tags.'
+                'When legacy mode is <strong>disabled</strong>, new property numbers use the '
+                'normal form (e.g. <code>PAR-201-2027-PR-0001</code>). '
+                'When <strong>enabled</strong>, they start with the LGU code below '
+                '(e.g. <code>LGU-SANTOL-201-2027-PR-0001</code> or <code>0621-201-2027-PR-0001</code>). '
+                'The PAR Header municipality is not used in the property number. '
+                'The LGU code is always printed on inventory tags.'
             ),
         }),
         ('PAR Header (Appendix 71)', {

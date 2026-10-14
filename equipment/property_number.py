@@ -47,13 +47,10 @@ def _lgu_label():
 
 
 def _property_number_lgu_prefix():
-    """Active first segment for new property numbers (legacy code or LGU-{Municipality})."""
-    site = _site_settings()
-    if site:
-        prefix = (site.property_number_prefix_segment or '').strip()
-        if prefix:
-            return prefix
-    return _lgu_label()
+    """LGU code prefix. Used only when legacy mode is enabled."""
+    if not _use_legacy_lgu_code():
+        return ''
+    return _lgu_code()
 
 
 def property_number_prefix(acquisition_cost=None, *, category=None):
@@ -233,6 +230,14 @@ def _next_sequence(*, purchase_date=None, form_prefix=None, lgu_label=None, excl
     return max_seq + 1
 
 
+def _prefix_of_base(base):
+    """Return the leading prefix of a base (everything before fund-year-classification)."""
+    parts = (base or '').split('-')
+    if len(parts) <= 3:
+        return (base or '').strip()
+    return '-'.join(parts[:-3])
+
+
 def _property_number_base(
     *,
     purchase_date=None,
@@ -243,16 +248,17 @@ def _property_number_base(
     """
     Return everything but the sequence.
 
-    Format: {LGU}-{FUND}-{YEAR}-{CLASSIFICATION}
-    The LGU segment comes from site settings: LGU-{Municipality}, or the
-    configured code when legacy mode is enabled.
+    Legacy mode on: {LGU_CODE}-{FUND}-{YEAR}-{CLASSIFICATION}
+    Legacy mode off: {FORM}-{FUND}-{YEAR}-{CLASSIFICATION} (PAR, ICS, SPC, or SPLC)
     """
-    del acquisition_cost  # classification no longer depends on the COA form type
-    lgu_prefix = _property_number_lgu_prefix() or 'LGU'
     fund_cluster = _fund_cluster_code(fund_source)
     year = f'{_parse_date(purchase_date).year:04d}'
     classification = _classification_code(category)
-    return f'{lgu_prefix}-{fund_cluster}-{year}-{classification}'
+    tail = f'{fund_cluster}-{year}-{classification}'
+    if _use_legacy_lgu_code():
+        return f'{_lgu_code() or "LGU"}-{tail}'
+    form_prefix = _form_type_prefix(acquisition_cost=acquisition_cost, category=category)
+    return f'{form_prefix}-{tail}'
 
 
 def generate_property_number(
@@ -268,13 +274,13 @@ def generate_property_number(
     """
     Build a property number from equipment attributes.
 
-    Format: {LGU}-{FUND_CODE}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
+    Legacy mode off (normal): {FORM}-{FUND}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
+    Example: PAR-201-2027-PR-0001
+
+    Legacy mode on: {LGU_CODE}-{FUND}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
     Examples: LGU-SANTOL-201-2027-PR-0001, 0621-201-2027-PR-0001
 
-    The LGU segment follows Site settings. Legacy mode off uses
-    LGU-{Municipality} from the PAR Header. Legacy mode on uses the LGU code
-    (a numeric code such as 0621, or a custom prefix such as LGU-SANTOL).
-    The sequence increments once per LGU prefix and year, shared across fund
+    The sequence increments once per prefix and year, shared across fund
     sources and classifications, and resets each calendar year (0001).
 
     When ``current_property_number`` is provided and its fund, year, and
@@ -333,7 +339,7 @@ def generate_property_numbers(
 
     sequence = _next_sequence(
         purchase_date=purchase_date,
-        lgu_label=_property_number_lgu_prefix(),
+        lgu_label=_prefix_of_base(base),
         exclude_pk=exclude_pk,
     )
     return [f'{base}-{(sequence + offset):04d}' for offset in range(count)]
@@ -385,7 +391,112 @@ def property_number_is_taken(property_number, *, exclude_pk=None):
     return qs.exists()
 
 
-def _perform_equipment_rekey(equipment, new_number, *, old_pk):
+def _rewrite_copied_property_numbers(old_pk, new_number):
+    """Keep printed PAR/ICS copies and audit links on the renamed property number."""
+    from core.models import AuditLog
+
+    from .models import InventoryCustodianSlipItem, PropertyAcknowledgmentReceiptItem
+
+    PropertyAcknowledgmentReceiptItem.objects.filter(
+        equipment_id=new_number,
+    ).update(property_number=new_number)
+    InventoryCustodianSlipItem.objects.filter(
+        equipment_id=new_number,
+    ).update(inventory_item_no=new_number)
+    AuditLog.objects.filter(
+        model_name='Equipment',
+        object_id=old_pk,
+    ).update(object_id=new_number)
+
+
+def _active_property_prefix(equipment):
+    """Prefix required by the current Site settings Property Number option."""
+    if _use_legacy_lgu_code():
+        return _lgu_code() or 'LGU'
+    return _form_type_prefix(
+        acquisition_cost=getattr(equipment, 'acquisition_cost', None) or getattr(equipment, 'purchase_cost', None),
+        category=getattr(equipment, 'category', None),
+    )
+
+
+def property_number_for_current_settings(equipment):
+    """
+    Property number for this equipment under the current Site settings.
+
+    Fund, year, classification, and sequence stay as recorded. Only the prefix
+    changes: the LGU code when legacy mode is on, otherwise PAR/ICS/SPC/SPLC.
+    """
+    parsed = _split_property_number(getattr(equipment, 'property_number', None) or getattr(equipment, 'pk', None))
+    prefix = _active_property_prefix(equipment)
+    if not parsed:
+        base = _property_number_base(
+            purchase_date=equipment.purchase_date,
+            fund_source=equipment.fund_source,
+            category=equipment.category,
+            acquisition_cost=equipment.acquisition_cost or equipment.purchase_cost,
+        )
+        sequence = _next_sequence(
+            purchase_date=equipment.purchase_date,
+            lgu_label=_prefix_of_base(base),
+            exclude_pk=equipment.pk,
+        )
+        return f'{base}-{sequence:04d}'
+    _prefix, fund, year, classification, sequence = parsed
+    return f'{prefix}-{fund}-{year}-{classification}-{sequence:04d}'
+
+
+def sync_equipment_property_numbers():
+    """
+    Rename inventory property numbers so the equipment list matches Site settings.
+
+    Returns the number of equipment records renamed.
+    """
+    import uuid
+
+    from .models import Equipment
+
+    equipment_list = list(
+        Equipment.objects.select_related('category', 'fund_source')
+    )
+    taken = set()
+    pending = []
+    for equipment in equipment_list:
+        target = property_number_for_current_settings(equipment)
+        if equipment.pk == target:
+            taken.add(target)
+        else:
+            pending.append((equipment, target))
+
+    changes = []
+    for equipment, target in pending:
+        base = target.rsplit('-', 1)[0]
+        sequence = int(target.rsplit('-', 1)[-1])
+        while target in taken and sequence < 10000:
+            sequence += 1
+            target = f'{base}-{sequence:04d}'
+        taken.add(target)
+        if equipment.pk != target:
+            changes.append((equipment, target))
+
+    if not changes:
+        return 0
+
+    with transaction.atomic():
+        staged = []
+        for equipment, target in changes:
+            temp_number = f'TMP{uuid.uuid4().hex[:16]}'
+            moved = rekey_equipment_to_property_number(
+                equipment, temp_number, old_pk=equipment.pk, refresh_qr=False,
+            )
+            staged.append((moved, target))
+        for equipment, target in staged:
+            rekey_equipment_to_property_number(
+                equipment, target, old_pk=equipment.pk,
+            )
+    return len(staged)
+
+
+def _perform_equipment_rekey(equipment, new_number, *, old_pk, refresh_qr=True):
     """
     Atomically move equipment to ``new_number`` and repoint all related FKs.
 
@@ -423,12 +534,14 @@ def _perform_equipment_rekey(equipment, new_number, *, old_pk):
             rel.related_model._base_manager.filter(
                 **{attname: old_pk}
             ).update(**{attname: new_number})
+        _rewrite_copied_property_numbers(old_pk, new_number)
         Equipment._base_manager.filter(pk=old_pk).delete()
-    equipment.ensure_qr_code_current()
+    if refresh_qr:
+        equipment.ensure_qr_code_current()
     return equipment
 
 
-def rekey_equipment_to_property_number(equipment, new_number, *, old_pk=None):
+def rekey_equipment_to_property_number(equipment, new_number, *, old_pk=None, refresh_qr=True):
     """
     Rename equipment to an explicit property number (manual admin edit).
 
@@ -443,7 +556,9 @@ def rekey_equipment_to_property_number(equipment, new_number, *, old_pk=None):
         return equipment
     if property_number_is_taken(new_number, exclude_pk=old_pk):
         raise IntegrityError(f'Property number "{new_number}" is already in use.')
-    return _perform_equipment_rekey(equipment, new_number, old_pk=old_pk)
+    return _perform_equipment_rekey(
+        equipment, new_number, old_pk=old_pk, refresh_qr=refresh_qr,
+    )
 
 
 def rekey_equipment_for_edit(equipment, *, max_attempts=25):
@@ -468,13 +583,16 @@ def rekey_equipment_for_edit(equipment, *, max_attempts=25):
     )
     old_key = _acquisition_key_from_number(old_pk)
     if old_pk and old_key and old_key == _acquisition_key_from_base(base):
-        return equipment  # fund, year, and classification unchanged → keep the number
+        aligned = property_number_for_current_settings(equipment)
+        if aligned == old_pk:
+            return equipment
+        return rekey_equipment_to_property_number(equipment, aligned, old_pk=old_pk)
 
     last_error = None
     for _ in range(max_attempts):
         sequence = _next_sequence(
             purchase_date=equipment.purchase_date,
-            lgu_label=_property_number_lgu_prefix(),
+            lgu_label=_prefix_of_base(base),
             exclude_pk=old_pk,
         )
         new_number = f'{base}-{sequence:04d}'
