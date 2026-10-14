@@ -159,11 +159,12 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 'property_number_lgu_code',
             ),
             'description': (
-                'Legacy numeric LGU code (inventory tags). When legacy mode is <strong>disabled</strong>, '
-                'auto-generated property numbers use <code>LGU-&#123;Municipality&#125;</code> from the '
-                'PAR Header municipality (e.g. <code>LGU-Sudipen-201-2027-PR-0001</code>). '
-                'When <strong>enabled</strong>, property numbers use the numeric code '
-                '(e.g. <code>0621-201-2027-PR-0001</code>). The numeric code is always available for inventory tags.'
+                'Choose the prefix for new property numbers. When legacy mode is '
+                '<strong>disabled</strong>, numbers use <code>LGU-&#123;Municipality&#125;</code> '
+                'from the PAR Header (e.g. <code>LGU-SANTOL-201-2027-PR-0001</code>). '
+                'When <strong>enabled</strong>, they use the LGU code below — a numeric code '
+                'or a custom prefix (e.g. <code>0621-201-2027-PR-0001</code> or '
+                '<code>LGU-SANTOL-201-2027-PR-0001</code>). The LGU code is always printed on inventory tags.'
             ),
         }),
         ('PAR Header (Appendix 71)', {

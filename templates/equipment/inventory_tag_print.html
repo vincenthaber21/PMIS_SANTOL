@@ -139,6 +139,12 @@
     .tag-heading .line1 { font-size: 5pt; }
     .tag-heading .line2 { font-weight: bold; font-size: 6pt; }
     .tag-heading .line3 { font-weight: bold; font-size: 6.5pt; }
+    .tag-heading .lgu-code {
+      font-weight: bold;
+      font-size: 6pt;
+      letter-spacing: 0.3px;
+      margin-top: 1px;
+    }
 
     .tag-number {
       text-align: right;
@@ -388,6 +394,9 @@
           <div class="line1">Republic of the Philippines</div>
           <div class="line2">PROVINCE OF {{ lgu_province|upper }}</div>
           <div class="line3">MUNICIPALITY OF {{ lgu_municipality|upper }}</div>
+          {% if show_lgu_code %}
+          <div class="lgu-code">{{ lgu_code }}</div>
+          {% endif %}
         </div>
         <div class="tag-number">
           <div class="no-label">No.</div>

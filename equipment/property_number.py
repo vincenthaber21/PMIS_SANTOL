@@ -47,31 +47,19 @@ def _lgu_label():
 
 
 def _property_number_lgu_prefix():
-    """Active first segment for new property numbers (legacy numeric or LGU-{Municipality})."""
+    """Active first segment for new property numbers (legacy code or LGU-{Municipality})."""
     site = _site_settings()
     if site:
-        return site.property_number_prefix_segment
+        prefix = (site.property_number_prefix_segment or '').strip()
+        if prefix:
+            return prefix
     return _lgu_label()
 
 
-def _known_property_number_prefixes():
-    """Prefixes used when parsing existing property numbers (active + legacy)."""
-    prefixes = []
-    active = _property_number_lgu_prefix()
-    if active:
-        prefixes.append(active)
-    legacy_code = _lgu_code()
-    if legacy_code and legacy_code not in prefixes:
-        prefixes.append(legacy_code)
-    municipality_label = _lgu_label()
-    if municipality_label and municipality_label not in prefixes:
-        prefixes.append(municipality_label)
-    return prefixes
-
-
 def property_number_prefix(acquisition_cost=None, *, category=None):
-    """Return the COA form prefix used at the start of property numbers."""
-    return _form_type_prefix(acquisition_cost=acquisition_cost, category=category)
+    """Return the LGU prefix used at the start of new property numbers."""
+    del acquisition_cost, category
+    return _property_number_lgu_prefix()
 
 
 def _segment_value(value, default='00'):
@@ -139,21 +127,45 @@ def _form_type_prefix(*, acquisition_cost=None, category=None):
     return 'ICS'
 
 
-def _parse_form_type_property_number(property_number):
-    """Return (form_prefix, year, sequence) for PAR/ICS/SPC/SPLC numbers."""
-    if not property_number:
+def _split_property_number(property_number):
+    """
+    Return (prefix, fund, year, classification, sequence).
+
+    The last four segments are fund, year, classification, and sequence.
+    Everything before that is the prefix, which may itself contain hyphens
+    (``LGU-SANTOL`` or ``0621``).
+    """
+    if not property_number or '-' not in str(property_number):
         return None
-    parts = property_number.split('-')
-    if len(parts) < 5 or parts[0] not in FORM_TYPE_PREFIXES:
+    parts = str(property_number).split('-')
+    if len(parts) < 5:
         return None
-    year = parts[2]
-    if len(year) != 4 or not year.isdigit():
+    fund, year, classification, sequence = parts[-4:]
+    if len(year) != 4 or not year.isdigit() or not sequence.isdigit():
         return None
-    try:
-        sequence = int(parts[-1])
-    except ValueError:
+    prefix = '-'.join(parts[:-4]).strip()
+    if not prefix:
         return None
-    return parts[0], year, sequence
+    return prefix, fund, year, classification, int(sequence)
+
+
+def _acquisition_key(fund, year, classification):
+    return f'{fund}-{year}-{classification}'.casefold()
+
+
+def _acquisition_key_from_number(property_number):
+    parsed = _split_property_number(property_number)
+    if not parsed:
+        return ''
+    _prefix, fund, year, classification, _sequence = parsed
+    return _acquisition_key(fund, year, classification)
+
+
+def _acquisition_key_from_base(base):
+    parts = (base or '').split('-')
+    if len(parts) < 3:
+        return ''
+    return _acquisition_key(parts[-3], parts[-2], parts[-1])
 
 
 def _parse_cost(value):
@@ -178,42 +190,27 @@ def _parse_date(value):
 
 def _parse_property_number_suffix(property_number, lgu_prefix=None):
     """Return (year, sequence) from a property number, or None if not parseable."""
-    form_parsed = _parse_form_type_property_number(property_number)
-    if form_parsed:
-        _form_prefix, year, sequence = form_parsed
-        return year, sequence
-
-    prefixes = [lgu_prefix] if lgu_prefix else _known_property_number_prefixes()
-    for prefix_label in prefixes:
-        if not prefix_label:
-            continue
-        prefix = f'{prefix_label}-'
-        if not property_number or not property_number.startswith(prefix):
-            continue
-        rest = property_number[len(prefix):]
-        parts = rest.split('-')
-        if len(parts) < 4:
-            continue
-        year = parts[1]
-        try:
-            sequence = int(parts[-1])
-        except ValueError:
-            continue
-        return year, sequence
-    return None
+    parsed = _split_property_number(property_number)
+    if not parsed:
+        return None
+    prefix, _fund, year, _classification, sequence = parsed
+    if lgu_prefix and prefix.casefold() != str(lgu_prefix).strip().casefold():
+        return None
+    return year, sequence
 
 
 def _next_sequence(*, purchase_date=None, form_prefix=None, lgu_label=None, exclude_pk=None):
     """
-    Return the next 4-digit sequence for property numbers in the same form type and year.
+    Return the next 4-digit sequence for the active LGU prefix in this year.
 
-    The counter is shared across fund sources and categories within the same
-    PAR/ICS/SPC/SPLC prefix. It resets each calendar year (first item is 0001).
+    The counter is shared across fund sources and classifications. It resets
+    each calendar year (first item is 0001). ``form_prefix`` is accepted for
+    callers that still pass the COA form type and is not part of the number.
     """
     from .models import Equipment
 
-    form_prefix = form_prefix or 'PAR'
-    lgu_prefix = lgu_label or _property_number_lgu_prefix()
+    del form_prefix  # sequence follows the LGU prefix, not the COA form type
+    lgu_prefix = (lgu_label or _property_number_lgu_prefix() or '').strip().casefold()
     year = f'{_parse_date(purchase_date).year:04d}'
 
     qs = Equipment.objects.all()
@@ -222,21 +219,15 @@ def _next_sequence(*, purchase_date=None, form_prefix=None, lgu_label=None, excl
 
     max_seq = None
     for property_number in qs.values_list('property_number', flat=True):
-        form_parsed = _parse_form_type_property_number(property_number)
-        if form_parsed:
-            prop_form, prop_year, seq = form_parsed
-            if prop_form == form_prefix and prop_year == year:
-                max_seq = seq if max_seq is None else max(max_seq, seq)
+        parsed = _split_property_number(property_number)
+        if not parsed:
             continue
-
-        parsed = _parse_property_number_suffix(property_number, lgu_prefix)
-        if parsed is None:
-            parsed = _parse_property_number_suffix(property_number)
-        if parsed is None:
+        prefix, _fund, prop_year, _classification, seq = parsed
+        if prop_year != year:
             continue
-        prop_year, seq = parsed
-        if prop_year == year:
-            max_seq = seq if max_seq is None else max(max_seq, seq)
+        if lgu_prefix and prefix.casefold() != lgu_prefix:
+            continue
+        max_seq = seq if max_seq is None else max(max_seq, seq)
     if max_seq is None:
         return 1
     return max_seq + 1
@@ -249,19 +240,19 @@ def _property_number_base(
     category=None,
     acquisition_cost=None,
 ):
-    """Return the {FORM}-{FUND}-{YEAR}-{CLASSIFICATION} prefix (everything but the sequence)."""
-    form_prefix = _form_type_prefix(acquisition_cost=acquisition_cost, category=category)
+    """
+    Return everything but the sequence.
+
+    Format: {LGU}-{FUND}-{YEAR}-{CLASSIFICATION}
+    The LGU segment comes from site settings: LGU-{Municipality}, or the
+    configured code when legacy mode is enabled.
+    """
+    del acquisition_cost  # classification no longer depends on the COA form type
+    lgu_prefix = _property_number_lgu_prefix() or 'LGU'
     fund_cluster = _fund_cluster_code(fund_source)
     year = f'{_parse_date(purchase_date).year:04d}'
     classification = _classification_code(category)
-    return f'{form_prefix}-{fund_cluster}-{year}-{classification}'
-
-
-def _base_of(property_number):
-    """Return the base prefix of an existing property number (drops the sequence segment)."""
-    if not property_number or '-' not in property_number:
-        return ''
-    return property_number.rsplit('-', 1)[0]
+    return f'{lgu_prefix}-{fund_cluster}-{year}-{classification}'
 
 
 def generate_property_number(
@@ -277,16 +268,18 @@ def generate_property_number(
     """
     Build a property number from equipment attributes.
 
-    Format: {FORM_TYPE}-{FUND_CODE}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
-    Example: PAR-101-2026-MO-0001, ICS-000-2026-XX-0001
+    Format: {LGU}-{FUND_CODE}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
+    Examples: LGU-SANTOL-201-2027-PR-0001, 0621-201-2027-PR-0001
 
-    FORM_TYPE is PAR, ICS, SPC, or SPLC (from category or COA classification).
-    The sequence increments once per form type and year. The counter resets each
-    calendar year (first item is 0001).
+    The LGU segment follows Site settings. Legacy mode off uses
+    LGU-{Municipality} from the PAR Header. Legacy mode on uses the LGU code
+    (a numeric code such as 0621, or a custom prefix such as LGU-SANTOL).
+    The sequence increments once per LGU prefix and year, shared across fund
+    sources and classifications, and resets each calendar year (0001).
 
-    When ``current_property_number`` is provided and its base prefix is unchanged,
-    the existing number is kept as-is so editing unrelated fields never renumbers
-    the item.
+    When ``current_property_number`` is provided and its fund, year, and
+    classification are unchanged, the existing number is kept so editing
+    unrelated fields never renumbers the item.
     """
     numbers = generate_property_numbers(
         count=1,
@@ -329,17 +322,18 @@ def generate_property_numbers(
         category=category,
         acquisition_cost=acquisition_cost,
     )
+    current_key = _acquisition_key_from_number(current_property_number)
     if (
         count == 1
         and current_property_number
-        and _base_of(current_property_number) == base
+        and current_key
+        and current_key == _acquisition_key_from_base(base)
     ):
         return [current_property_number]
 
-    form_prefix = base.split('-', 1)[0]
     sequence = _next_sequence(
         purchase_date=purchase_date,
-        form_prefix=form_prefix,
+        lgu_label=_property_number_lgu_prefix(),
         exclude_pk=exclude_pk,
     )
     return [f'{base}-{(sequence + offset):04d}' for offset in range(count)]
@@ -349,7 +343,7 @@ def save_new_equipment_with_property_number(instance, *, max_attempts=25):
     """
     Insert new equipment with a collision-safe, auto-incremented control number.
 
-    The control number (last segment) increments once per LGU and year, shared
+    The control number (last segment) increments once per LGU prefix and year, shared
     across all categories, and resets to 0001 when the year changes. Because ``property_number`` is the primary
     key, this forces an INSERT so a duplicate control number raises an error
     instead of silently overwriting an existing record. On collision (e.g. two
@@ -455,12 +449,13 @@ def rekey_equipment_to_property_number(equipment, new_number, *, old_pk=None):
 def rekey_equipment_for_edit(equipment, *, max_attempts=25):
     """
     After an equipment edit, rename its property number (the primary key) when
-    the base prefix changed because of a new date, fund source, or category.
+    fund, year, or classification changed.
 
     The rename is done atomically: a copy is inserted under the new number, every
     linked record (assignment history, PAR/ICS items, accounting entries,
     maintenance and borrow requests) is repointed to it, then the old row is
-    removed. If the base prefix is unchanged the number is kept as-is.
+    removed. If fund, year, and classification are unchanged the number is kept,
+    including numbers created under an older prefix.
 
     Returns the equipment instance (with its possibly-updated primary key).
     """
@@ -471,15 +466,15 @@ def rekey_equipment_for_edit(equipment, *, max_attempts=25):
         category=equipment.category,
         acquisition_cost=equipment.acquisition_cost or equipment.purchase_cost,
     )
-    if old_pk and _base_of(old_pk) == base:
-        return equipment  # nothing acquisition-related changed → keep the number
+    old_key = _acquisition_key_from_number(old_pk)
+    if old_pk and old_key and old_key == _acquisition_key_from_base(base):
+        return equipment  # fund, year, and classification unchanged → keep the number
 
-    form_prefix = base.split('-', 1)[0]
     last_error = None
     for _ in range(max_attempts):
         sequence = _next_sequence(
             purchase_date=equipment.purchase_date,
-            form_prefix=form_prefix,
+            lgu_label=_property_number_lgu_prefix(),
             exclude_pk=old_pk,
         )
         new_number = f'{base}-{sequence:04d}'

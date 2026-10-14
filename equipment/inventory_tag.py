@@ -108,6 +108,12 @@ def get_inventory_tag_context(equipment, request=None):
 
     qr_payload = equipment.get_qr_payload() if equipment.pk else ''
     qr_code_data = build_qr_data_uri(qr_payload, box_size=8, border=3) if qr_payload else ''
+    lgu_code = lgu['lgu_code']
+    property_number = (equipment.property_number or '').strip()
+    # The code stays on the tag even when property numbers use LGU-{Municipality}.
+    show_lgu_code = bool(lgu_code) and not property_number.casefold().startswith(
+        lgu_code.casefold(),
+    )
 
     return {
         'equipment': equipment,
@@ -115,6 +121,8 @@ def get_inventory_tag_context(equipment, request=None):
         'logo_url': logo_url,
         'lgu_province': lgu['province'],
         'lgu_municipality': lgu['municipality'],
+        'lgu_code': lgu_code,
+        'show_lgu_code': show_lgu_code,
         'inventory_number': equipment.property_number,
         'office_location': _office_location(equipment),
         'person_accountable': person_accountable,

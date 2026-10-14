@@ -34,17 +34,22 @@ class SiteSettings(models.Model):
         help_text='Letter shown in the logo box when no image is uploaded.',
     )
     property_number_lgu_code = models.CharField(
-        max_length=20,
+        max_length=40,
         default='1042',
-        help_text='Numeric LGU / school code (e.g. 0621). Used on inventory tags; also used as the property-number prefix when legacy mode is enabled below.',
+        verbose_name='Property number LGU code',
+        help_text=(
+            'Code printed on inventory tags, and used as the property-number prefix when '
+            'legacy mode is enabled. Use a numeric code (0621) or a custom prefix (LGU-SANTOL).'
+        ),
     )
     property_number_use_legacy_lgu_code = models.BooleanField(
         default=False,
         verbose_name='Use legacy numeric LGU code for property numbers',
         help_text=(
-            'When enabled, auto-generated property numbers use the numeric code above '
-            '(e.g. 0621-201-2027-PR-0001). When disabled, they use LGU-{Municipality} from '
-            'PAR Header (e.g. LGU-Sudipen-201-2027-PR-0001).'
+            'When enabled, auto-generated property numbers start with the LGU code above '
+            '(e.g. 0621-201-2027-PR-0001 or LGU-SANTOL-201-2027-PR-0001). When disabled, '
+            'they start with LGU-{Municipality} from PAR Header '
+            '(e.g. LGU-SANTOL-201-2027-PR-0001).'
         ),
     )
     lgu_municipality = models.CharField(
@@ -191,12 +196,18 @@ class SiteSettings(models.Model):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
 
+    @staticmethod
+    def format_lgu_municipality_prefix(municipality):
+        """Build LGU-{Municipality}, keeping the name as entered aside from a capital first letter."""
+        name = (municipality or '').strip()
+        if not name:
+            return 'LGU'
+        words = [word[:1].upper() + word[1:] for word in name.split() if word]
+        return f'LGU-{" ".join(words)}' if words else 'LGU'
+
     @property
     def property_number_lgu_label(self):
-        municipality = (self.lgu_municipality or '').strip()
-        if municipality:
-            return f'LGU-{municipality.title()}'
-        return 'LGU'
+        return self.format_lgu_municipality_prefix(self.lgu_municipality)
 
     @property
     def property_number_prefix_segment(self):
