@@ -65,7 +65,7 @@ class Category(models.Model):
     )
     property_type_code = models.CharField(
         max_length=10, blank=True, default='',
-        help_text='Property number classification segment, e.g. MO, IT, FF',
+        help_text='Optional label on PAR/ICS. The property number uses the category code instead.',
     )
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE,

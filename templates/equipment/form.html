@@ -230,7 +230,7 @@
                   {% if site_settings.property_number_use_legacy_lgu_code %}
                   Prefix follows Site settings: {{ site_settings.property_number_lgu_code }}.
                   {% else %}
-                  Using the normal form number (PAR, ICS, SPC, or SPLC).
+                  Layout: year–category–item count–department (e.g. 2027-05-01-001-HRMO).
                   {% endif %}
                 </div>
                 {% else %}
@@ -471,7 +471,7 @@
         <div class="mb-3">
           <label class="form-label" for="newCategoryTypeCode">Property type code</label>
           <input type="text" class="form-control" id="newCategoryTypeCode" placeholder="e.g. MO" maxlength="10">
-          <div class="form-text">Used in property numbers (e.g. MO for Office Equipment).</div>
+          <div class="form-text">Not used in the property number. The category code (e.g. 05-01) is.</div>
         </div>
         <div>
           <label class="form-label" for="newCategoryStatus">Status</label>
@@ -898,7 +898,7 @@
     input.className = 'form-control';
     input.readOnly = true;
     input.value = value || '';
-    input.placeholder = 'PAR-000-0000-XX-0000';
+    input.placeholder = '2027-05-01-001-HRMO';
     input.id = inputId;
     if (index === 0) {
       input.name = 'property_number';

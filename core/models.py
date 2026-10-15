@@ -56,7 +56,7 @@ class SiteSettings(models.Model):
         help_text=(
             'When enabled, auto-generated property numbers start with the LGU code above '
             '(e.g. LGU-SANTOL-201-2027-PR-0001 or 0621-201-2027-PR-0001). When disabled, '
-            'they use the normal form number (e.g. PAR-201-2027-PR-0001).'
+            'they use year-category-item count-department (e.g. 2027-05-01-001-HRMO).'
         ),
     )
     lgu_municipality = models.CharField(

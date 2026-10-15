@@ -139,7 +139,7 @@ class EquipmentForm(forms.ModelForm):
             self.fields['property_number'].widget.attrs.update({
                 'class': 'form-control',
                 'readonly': 'readonly',
-                'placeholder': 'PAR-000-0000-XX-0000',
+                'placeholder': '2027-05-01-001-HRMO',
                 'id': 'id_property_number',
             })
             # Validated in clean(); readonly fields are often empty on first paint.
@@ -344,7 +344,7 @@ class EquipmentForm(forms.ModelForm):
         if not cleaned_data.get('property_number'):
             self.add_error(
                 'property_number',
-                'Property number is required. Select Fund Source, Category, and Date Acquired.',
+                'Property number is required. Select Category, Location, and Date Acquired.',
             )
         return cleaned_data
 

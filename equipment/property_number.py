@@ -132,26 +132,66 @@ def _form_type_prefix(*, acquisition_cost=None, category=None):
     return 'ICS'
 
 
+def _is_year_segment(value):
+    text = str(value or '').strip()
+    if len(text) != 4 or not text.isdigit():
+        return False
+    year = int(text)
+    return 1900 <= year <= 2199
+
+
 def _split_property_number(property_number):
     """
-    Return (prefix, fund, year, classification, sequence).
+    Parse a property number into a dict, or return None.
 
-    The last four segments are fund, year, classification, and sequence.
-    Everything before that is the prefix, which may itself contain hyphens
-    (``LGU-SANTOL`` or ``0621``).
+    Standard layout: {YEAR}-{CATEGORY}-{ITEM COUNT}-{DEPARTMENT}
+    Example: 2027-05-01-001-HRMO
+    The category code may itself contain hyphens (``05-01``).
+
+    Legacy layout: {PREFIX}-{FUND}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
+    Example: PAR-201-2027-PR-0001 or LGU-SANTOL-201-2027-PR-0001
     """
     if not property_number or '-' not in str(property_number):
         return None
     parts = str(property_number).split('-')
-    if len(parts) < 5:
+    if len(parts) < 4:
         return None
-    fund, year, classification, sequence = parts[-4:]
-    if len(year) != 4 or not year.isdigit() or not sequence.isdigit():
-        return None
-    prefix = '-'.join(parts[:-4]).strip()
-    if not prefix:
-        return None
-    return prefix, fund, year, classification, int(sequence)
+
+    if (
+        len(parts) >= 5
+        and parts[-1].isdigit()
+        and _is_year_segment(parts[-3])
+    ):
+        fund, year, classification, sequence = parts[-4:]
+        prefix = '-'.join(parts[:-4]).strip()
+        if not prefix or not sequence.isdigit():
+            return None
+        return {
+            'format': 'legacy',
+            'prefix': prefix,
+            'fund': fund,
+            'year': year,
+            'classification': classification,
+            'sequence': int(sequence),
+            'category': '',
+            'department': '',
+        }
+
+    if _is_year_segment(parts[0]) and parts[-2].isdigit() and parts[-1].strip():
+        category = '-'.join(parts[1:-2]).strip()
+        if not category:
+            return None
+        return {
+            'format': 'standard',
+            'prefix': '',
+            'fund': '',
+            'year': parts[0],
+            'classification': '',
+            'sequence': int(parts[-2]),
+            'category': category,
+            'department': parts[-1].strip(),
+        }
+    return None
 
 
 def _acquisition_key(fund, year, classification):
@@ -160,10 +200,9 @@ def _acquisition_key(fund, year, classification):
 
 def _acquisition_key_from_number(property_number):
     parsed = _split_property_number(property_number)
-    if not parsed:
+    if not parsed or parsed['format'] != 'legacy':
         return ''
-    _prefix, fund, year, classification, _sequence = parsed
-    return _acquisition_key(fund, year, classification)
+    return _acquisition_key(parsed['fund'], parsed['year'], parsed['classification'])
 
 
 def _acquisition_key_from_base(base):
@@ -171,6 +210,52 @@ def _acquisition_key_from_base(base):
     if len(parts) < 3:
         return ''
     return _acquisition_key(parts[-3], parts[-2], parts[-1])
+
+
+def _category_number(category):
+    """Category code placed in the property number, e.g. 05-01."""
+    code = _segment_value(getattr(category, 'code', None), '00')
+    return code.replace(' ', '')
+
+
+def _department_code(department):
+    """Department code at the end of the property number, e.g. HRMO."""
+    code = _segment_value(getattr(department, 'code', None), 'XX')
+    code = code.replace('-', '').replace(' ', '').upper()
+    return code or 'XX'
+
+
+def _format_item_sequence(sequence):
+    sequence = int(sequence)
+    if sequence < 0:
+        sequence = 0
+    return f'{sequence:03d}'
+
+
+def _format_standard_number(year, category_code, sequence, department_code):
+    """year-category-item count-department, e.g. 2027-05-01-001-HRMO."""
+    return f'{year}-{category_code}-{_format_item_sequence(sequence)}-{department_code}'
+
+
+def _standard_parts(*, purchase_date=None, category=None, department=None):
+    year = f'{_parse_date(purchase_date).year:04d}'
+    return year, _category_number(category), _department_code(department)
+
+
+def _number_with_sequence(property_number, sequence):
+    """Return the same property number with a new item-count / sequence segment."""
+    parsed = _split_property_number(property_number)
+    if not parsed:
+        base = str(property_number).rsplit('-', 1)[0]
+        return f'{base}-{int(sequence):04d}'
+    if parsed['format'] == 'standard':
+        return _format_standard_number(
+            parsed['year'], parsed['category'], sequence, parsed['department'],
+        )
+    return (
+        f'{parsed["prefix"]}-{parsed["fund"]}-{parsed["year"]}-'
+        f'{parsed["classification"]}-{int(sequence):04d}'
+    )
 
 
 def _parse_cost(value):
@@ -198,10 +283,12 @@ def _parse_property_number_suffix(property_number, lgu_prefix=None):
     parsed = _split_property_number(property_number)
     if not parsed:
         return None
-    prefix, _fund, year, _classification, sequence = parsed
-    if lgu_prefix and prefix.casefold() != str(lgu_prefix).strip().casefold():
-        return None
-    return year, sequence
+    if lgu_prefix:
+        if parsed['format'] != 'legacy':
+            return None
+        if parsed['prefix'].casefold() != str(lgu_prefix).strip().casefold():
+            return None
+    return parsed['year'], parsed['sequence']
 
 
 def _next_sequence(*, purchase_date=None, form_prefix=None, lgu_label=None, exclude_pk=None):
@@ -225,13 +312,42 @@ def _next_sequence(*, purchase_date=None, form_prefix=None, lgu_label=None, excl
     max_seq = None
     for property_number in qs.values_list('property_number', flat=True):
         parsed = _split_property_number(property_number)
-        if not parsed:
+        if not parsed or parsed['format'] != 'legacy':
             continue
-        prefix, _fund, prop_year, _classification, seq = parsed
-        if prop_year != year:
+        if parsed['year'] != year:
             continue
-        if lgu_prefix and prefix.casefold() != lgu_prefix:
+        if lgu_prefix and parsed['prefix'].casefold() != lgu_prefix:
             continue
+        seq = parsed['sequence']
+        max_seq = seq if max_seq is None else max(max_seq, seq)
+    if max_seq is None:
+        return 1
+    return max_seq + 1
+
+
+def _next_standard_sequence(*, year, category_code, exclude_pk=None):
+    """
+    Next 3-digit item count for this year and category.
+
+    The counter is shared by every department and resets each calendar year
+    (the first item of a category is 001).
+    """
+    from .models import Equipment
+
+    year = f'{year}'
+    category_key = (category_code or '').strip().casefold()
+    qs = Equipment.objects.all()
+    if exclude_pk:
+        qs = qs.exclude(pk=exclude_pk)
+
+    max_seq = None
+    for property_number in qs.values_list('property_number', flat=True):
+        parsed = _split_property_number(property_number)
+        if not parsed or parsed['format'] != 'standard':
+            continue
+        if parsed['year'] != year or parsed['category'].casefold() != category_key:
+            continue
+        seq = parsed['sequence']
         max_seq = seq if max_seq is None else max(max_seq, seq)
     if max_seq is None:
         return 1
@@ -254,10 +370,10 @@ def _property_number_base(
     acquisition_cost=None,
 ):
     """
-    Return everything but the sequence.
+    Return the legacy prefix through classification, without the sequence.
 
-    Legacy mode on: {LGU_CODE}-{FUND}-{YEAR}-{CLASSIFICATION}
-    Legacy mode off: {FORM}-{FUND}-{YEAR}-{CLASSIFICATION} (PAR, ICS, SPC, or SPLC)
+    {LGU_CODE}-{FUND}-{YEAR}-{CLASSIFICATION}
+    Used only when legacy LGU numbering is enabled.
     """
     fund_cluster = _fund_cluster_code(fund_source)
     year = f'{_parse_date(purchase_date).year:04d}'
@@ -282,18 +398,15 @@ def generate_property_number(
     """
     Build a property number from equipment attributes.
 
-    Legacy mode off (normal): {FORM}-{FUND}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
-    Example: PAR-201-2027-PR-0001
+    Standard layout: {YEAR}-{CATEGORY}-{ITEM COUNT}-{DEPARTMENT}
+    Example: 2027-05-01-001-HRMO
+
+    The item count is 001, 002, … for that category in the acquisition year.
+    It resets each calendar year. Changing the department keeps the item count
+    and only replaces the office code.
 
     Legacy mode on: {LGU_CODE}-{FUND}-{YEAR}-{CLASSIFICATION}-{SEQUENCE}
     Examples: LGU-SANTOL-201-2027-PR-0001, 0621-201-2027-PR-0001
-
-    The sequence increments once per prefix and year, shared across fund
-    sources and classifications, and resets each calendar year (0001).
-
-    When ``current_property_number`` is provided and its fund, year, and
-    classification are unchanged, the existing number is kept so editing
-    unrelated fields never renumbers the item.
     """
     numbers = generate_property_numbers(
         count=1,
@@ -334,6 +447,16 @@ def generate_property_numbers(
     if not unique_property_numbers_enabled():
         count = 1
 
+    if not _use_legacy_lgu_code():
+        return _generate_standard_property_numbers(
+            count=count,
+            purchase_date=purchase_date,
+            category=category,
+            department=department,
+            exclude_pk=exclude_pk,
+            current_property_number=current_property_number,
+        )
+
     base = _property_number_base(
         purchase_date=purchase_date,
         fund_source=fund_source,
@@ -357,12 +480,52 @@ def generate_property_numbers(
     return [f'{base}-{(sequence + offset):04d}' for offset in range(count)]
 
 
+def _generate_standard_property_numbers(
+    *,
+    count,
+    purchase_date=None,
+    category=None,
+    department=None,
+    exclude_pk=None,
+    current_property_number=None,
+):
+    """year-category-item count-department, e.g. 2027-05-01-001-HRMO."""
+    year, category_code, department_code = _standard_parts(
+        purchase_date=purchase_date,
+        category=category,
+        department=department,
+    )
+    current = _split_property_number(current_property_number) if current_property_number else None
+    if count == 1 and current and current['format'] == 'legacy':
+        return [str(current_property_number).strip()]
+    if (
+        count == 1
+        and current
+        and current['format'] == 'standard'
+        and current['year'] == year
+        and current['category'].casefold() == category_code.casefold()
+    ):
+        return [_format_standard_number(
+            year, category_code, current['sequence'], department_code,
+        )]
+
+    sequence = _next_standard_sequence(
+        year=year,
+        category_code=category_code,
+        exclude_pk=exclude_pk,
+    )
+    return [
+        _format_standard_number(year, category_code, sequence + offset, department_code)
+        for offset in range(count)
+    ]
+
+
 def save_new_equipment_with_property_number(instance, *, max_attempts=25):
     """
     Insert new equipment with a collision-safe, auto-incremented control number.
 
-    The control number (last segment) increments once per LGU prefix and year, shared
-    across all categories, and resets to 0001 when the year changes. Because ``property_number`` is the primary
+    The item count increments once per category and year, and resets to 001 when the
+    year changes. Because ``property_number`` is the primary
     key, this forces an INSERT so a duplicate control number raises an error
     instead of silently overwriting an existing record. On collision (e.g. two
     users registering at the same time) it regenerates the next number and
@@ -435,12 +598,36 @@ def property_number_for_current_settings(equipment):
     """
     Property number for this equipment under the current Site settings.
 
-    Fund, year, classification, and sequence stay as recorded. Only the prefix
-    changes: the LGU code when legacy mode is on, otherwise PAR/ICS/SPC/SPLC.
+    Standard mode uses year-category-item count-department. Legacy mode keeps
+    fund, year, classification, and sequence, and only swaps the LGU prefix.
     """
-    parsed = _split_property_number(getattr(equipment, 'property_number', None) or getattr(equipment, 'pk', None))
+    parsed = _split_property_number(
+        getattr(equipment, 'property_number', None) or getattr(equipment, 'pk', None)
+    )
+    if not _use_legacy_lgu_code():
+        year, category_code, department_code = _standard_parts(
+            purchase_date=equipment.purchase_date,
+            category=equipment.category,
+            department=equipment.department,
+        )
+        if (
+            parsed
+            and parsed['format'] == 'standard'
+            and parsed['year'] == year
+            and parsed['category'].casefold() == category_code.casefold()
+        ):
+            return _format_standard_number(
+                year, category_code, parsed['sequence'], department_code,
+            )
+        sequence = _next_standard_sequence(
+            year=year,
+            category_code=category_code,
+            exclude_pk=equipment.pk,
+        )
+        return _format_standard_number(year, category_code, sequence, department_code)
+
     prefix = _active_property_prefix(equipment)
-    if not parsed:
+    if not parsed or parsed['format'] != 'legacy':
         base = _property_number_base(
             purchase_date=equipment.purchase_date,
             fund_source=equipment.fund_source,
@@ -453,8 +640,10 @@ def property_number_for_current_settings(equipment):
             exclude_pk=equipment.pk,
         )
         return f'{base}-{sequence:04d}'
-    _prefix, fund, year, classification, sequence = parsed
-    return f'{prefix}-{fund}-{year}-{classification}-{sequence:04d}'
+    return (
+        f'{prefix}-{parsed["fund"]}-{parsed["year"]}-'
+        f'{parsed["classification"]}-{parsed["sequence"]:04d}'
+    )
 
 
 def sync_equipment_property_numbers():
@@ -468,25 +657,40 @@ def sync_equipment_property_numbers():
     from .models import Equipment
 
     equipment_list = list(
-        Equipment.objects.select_related('category', 'fund_source')
+        Equipment.objects.select_related('category', 'fund_source', 'department')
     )
     taken = set()
+    used_item_counts = {}
     pending = []
+
+    def _note_number(number):
+        parsed = _split_property_number(number)
+        if parsed and parsed['format'] == 'standard':
+            key = (parsed['year'], parsed['category'].casefold())
+            used_item_counts.setdefault(key, set()).add(parsed['sequence'])
+
     for equipment in equipment_list:
         target = property_number_for_current_settings(equipment)
         if equipment.pk == target:
             taken.add(target)
+            _note_number(target)
         else:
             pending.append((equipment, target))
 
     changes = []
     for equipment, target in pending:
-        base = target.rsplit('-', 1)[0]
-        sequence = int(target.rsplit('-', 1)[-1])
-        while target in taken and sequence < 10000:
+        parsed = _split_property_number(target)
+        sequence = parsed['sequence'] if parsed else 1
+        key = None
+        if parsed and parsed['format'] == 'standard':
+            key = (parsed['year'], parsed['category'].casefold())
+        while sequence < 10000 and (
+            target in taken or (key and sequence in used_item_counts.get(key, ()))
+        ):
             sequence += 1
-            target = f'{base}-{sequence:04d}'
+            target = _number_with_sequence(target, sequence)
         taken.add(target)
+        _note_number(target)
         if equipment.pk != target:
             changes.append((equipment, target))
 
@@ -576,17 +780,61 @@ def rekey_equipment_to_property_number(equipment, new_number, *, old_pk=None, re
 def rekey_equipment_for_edit(equipment, *, max_attempts=25):
     """
     After an equipment edit, rename its property number (the primary key) when
-    fund, year, or classification changed.
+    the year, category, or department changed.
 
-    The rename is done atomically: a copy is inserted under the new number, every
-    linked record (assignment history, PAR/ICS items, accounting entries,
-    maintenance and borrow requests) is repointed to it, then the old row is
-    removed. If fund, year, and classification are unchanged the number is kept,
-    including numbers created under an older prefix.
+    The item count stays the same when only the department changes. A new item
+    count is assigned when the year or category changes. Numbers already stored
+    in the legacy layout are left as-is while standard numbering is active.
 
     Returns the equipment instance (with its possibly-updated primary key).
     """
     old_pk = equipment.pk
+    if not _use_legacy_lgu_code():
+        parsed = _split_property_number(old_pk)
+        if parsed and parsed['format'] == 'legacy':
+            return equipment
+        year, category_code, department_code = _standard_parts(
+            purchase_date=equipment.purchase_date,
+            category=equipment.category,
+            department=equipment.department,
+        )
+        if (
+            parsed
+            and parsed['format'] == 'standard'
+            and parsed['year'] == year
+            and parsed['category'].casefold() == category_code.casefold()
+        ):
+            new_number = _format_standard_number(
+                year, category_code, parsed['sequence'], department_code,
+            )
+            if new_number == old_pk:
+                return equipment
+            return rekey_equipment_to_property_number(equipment, new_number, old_pk=old_pk)
+
+        last_error = None
+        for _ in range(max_attempts):
+            sequence = _next_standard_sequence(
+                year=year,
+                category_code=category_code,
+                exclude_pk=old_pk,
+            )
+            new_number = _format_standard_number(
+                year, category_code, sequence, department_code,
+            )
+            try:
+                return _perform_equipment_rekey(equipment, new_number, old_pk=old_pk)
+            except IntegrityError as exc:
+                last_error = exc
+                equipment.property_number = old_pk
+                equipment.pk = old_pk
+                continue
+
+        equipment.property_number = old_pk
+        equipment.pk = old_pk
+        if last_error:
+            raise last_error
+        return equipment
+
     base = _property_number_base(
         purchase_date=equipment.purchase_date,
         fund_source=equipment.fund_source,
@@ -635,15 +883,18 @@ def preview_property_number(
     count=1,
 ):
     """Resolve related objects and return generated property number(s)."""
-    from .models import Category, FundSource
+    from .models import Category, Department, FundSource
 
     fund_source = None
     category = None
+    department = None
 
     if fund_source_id:
         fund_source = FundSource.objects.filter(pk=fund_source_id).first()
     if category_id:
         category = Category.objects.filter(pk=category_id).first()
+    if department_id:
+        department = Department.objects.filter(pk=department_id).first()
 
     property_numbers = generate_property_numbers(
         count=count,
@@ -651,6 +902,7 @@ def preview_property_number(
         purchase_date=purchase_date,
         fund_source=fund_source,
         category=category,
+        department=department,
         exclude_pk=exclude_pk,
         current_property_number=current_property_number,
     )
@@ -676,6 +928,8 @@ def preview_property_number(
         'use_legacy_lgu_code': _use_legacy_lgu_code(),
         'fund_cluster': _fund_cluster_code(fund_source),
         'year_acquired': f'{_parse_date(purchase_date).year:04d}',
+        'category_code': _category_number(category),
+        'department_code': _department_code(department),
         'classification_code': _classification_code(category),
         'form_type': form_prefix,
         'coa_classification': coa_preview['classification'],
