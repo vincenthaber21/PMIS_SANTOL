@@ -130,7 +130,7 @@ def get_inventory_tag_context(equipment, request=None):
         'property_number': equipment.property_number,
         'serial_number': equipment.serial_number or '',
         'is_serviceable': serviceable,
-        'quantity': 1,
+        'quantity': max(int(equipment.quantity or 1), 1),
         'acquisition_cost': equipment.acquisition_cost or equipment.purchase_cost,
         'date_acquired': equipment.purchase_date,
         'date_counted': date_counted,

@@ -232,7 +232,7 @@
             </td>
             <td>
               <small>
-                {% if par %}
+                {% if par and par.end_user %}
                 {{ par.end_user.get_full_name|default:par.end_user.username }}
                 {% elif eq.assigned_user %}
                 {{ eq.assigned_user.get_full_name|default:eq.assigned_user.username }}

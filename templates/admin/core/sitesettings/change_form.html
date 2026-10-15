@@ -78,7 +78,9 @@
     margin: 0;
   }
   .field-property_number_use_legacy_lgu_code > label,
-  .field-property_number_use_legacy_lgu_code .checkbox-row {
+  .field-property_number_use_legacy_lgu_code .checkbox-row,
+  .field-property_number_unique_per_unit > label,
+  .field-property_number_unique_per_unit .checkbox-row {
     display: none;
   }
   .field-property_number_lgu_code.legacy-mode-active input {
@@ -139,6 +141,44 @@
   const codeField = document.getElementById('id_property_number_lgu_code');
   if (codeField) codeField.addEventListener('input', syncToggle);
   syncToggle();
+})();
+
+(function () {
+  const checkbox = document.getElementById('id_property_number_unique_per_unit');
+  const toggleField = document.querySelector('.field-property_number_unique_per_unit');
+  if (!checkbox || !toggleField) return;
+
+  const statusEl = document.createElement('span');
+  statusEl.className = 'legacy-lgu-toggle__status';
+
+  const hintEl = document.createElement('p');
+  hintEl.className = 'legacy-lgu-format-hint';
+
+  const label = document.createElement('label');
+  label.className = 'legacy-lgu-toggle';
+  const track = document.createElement('span');
+  track.className = 'legacy-lgu-toggle__track';
+  label.appendChild(checkbox);
+  label.appendChild(track);
+  label.appendChild(statusEl);
+
+  const row = document.createElement('div');
+  row.className = 'legacy-lgu-toggle-row';
+  row.appendChild(label);
+  row.appendChild(hintEl);
+  toggleField.appendChild(row);
+
+  function syncUniqueToggle() {
+    const enabled = checkbox.checked;
+    statusEl.textContent = enabled ? 'Enabled' : 'Disabled';
+    statusEl.className = 'legacy-lgu-toggle__status ' + (enabled ? 'is-on' : 'is-off');
+    hintEl.textContent = enabled
+      ? '10 units are saved as 10 property numbers.'
+      : '10 units share one property number.';
+  }
+
+  checkbox.addEventListener('change', syncUniqueToggle);
+  syncUniqueToggle();
 })();
 </script>
 {% endblock %}

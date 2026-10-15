@@ -220,7 +220,13 @@
                   </div>
                 </div>
                 <div class="pn-panel__hint" id="propertyNumberHint">
-                  Each unit gets its own property number for individual accountability.
+                  <span id="propertyNumberModeHint">
+                    {% if site_settings.property_number_unique_per_unit %}
+                    Each unit gets its own property number for individual accountability.
+                    {% else %}
+                    Unique numbering is off. Every unit in this registration shares one property number.
+                    {% endif %}
+                  </span>
                   {% if site_settings.property_number_use_legacy_lgu_code %}
                   Prefix follows Site settings: {{ site_settings.property_number_lgu_code }}.
                   {% else %}
@@ -275,7 +281,13 @@
             <label class="form-label">Quantity <span class="text-danger">*</span></label>
             {{ form.quantity }}
             {% if is_create %}
-            <div class="form-text">Qty 2–500 creates separate property numbers per unit.</div>
+            <div class="form-text" id="quantityHelp">
+              {% if site_settings.property_number_unique_per_unit %}
+              Qty 2–500 creates a separate property number for each unit.
+              {% else %}
+              Qty 2–500 keeps one property number shared by every unit.
+              {% endif %}
+            </div>
             {% endif %}
             {% if form.quantity.errors %}<div class="text-danger small">{{ form.quantity.errors|join:", " }}</div>{% endif %}
           </div>
@@ -695,6 +707,7 @@
   const propertyNumberSummary = document.getElementById('propertyNumberSummary');
   const propertyNumberBadge = document.getElementById('propertyNumberBadge');
   const isCreate = {{ is_create|yesno:"true,false" }};
+  let uniquePerUnit = {{ site_settings.property_number_unique_per_unit|yesno:"true,false" }};
   if (!propertyNumberInput && !propertyNumberPanel) return;
 
   const excludePk = "{{ equipment.pk|default_if_none:''|escapejs }}";
@@ -732,7 +745,12 @@
       return;
     }
 
-    if (isCreate && count > 1) {
+    if (isCreate && count > 1 && !uniquePerUnit) {
+      propertyNumberSummary.innerHTML =
+        '<code>' + first + '</code> · same number for all ' + count +
+        ' units · click to ' +
+        (propertyNumberPanel?.classList.contains('is-open') ? 'hide' : 'preview');
+    } else if (isCreate && count > 1) {
       propertyNumberSummary.innerHTML =
         '<code>' + first + '</code> … +' + (count - 1) + ' more · click to ' +
         (propertyNumberPanel?.classList.contains('is-open') ? 'hide' : 'preview');
@@ -787,7 +805,22 @@
       return;
     }
 
-    const count = Math.max(1, (numbers && numbers.length) || getQuantityCount());
+    const quantityCount = getQuantityCount();
+    if (!uniquePerUnit) {
+      const shared = (numbers && numbers[0]) || '';
+      propertyNumbersList.innerHTML = '';
+      propertyNumbersList.classList.remove('pn-list--scroll');
+      propertyNumbersList.appendChild(
+        buildPropertyNumberUnit(0, 1, shared),
+      );
+      syncPropertyNumberModeHint(quantityCount);
+      updatePropertyNumberSummary(Array.from({ length: quantityCount }, function () {
+        return shared;
+      }));
+      return;
+    }
+
+    const count = Math.max(1, (numbers && numbers.length) || quantityCount);
     const values = (numbers && numbers.length) ? numbers.slice() : [];
     while (values.length < count) {
       values.push('');
@@ -822,7 +855,27 @@
       }
     }
 
+    syncPropertyNumberModeHint(count);
     updatePropertyNumberSummary(values);
+  }
+
+  function syncPropertyNumberModeHint(count) {
+    const hint = document.getElementById('propertyNumberModeHint');
+    const quantityHelp = document.getElementById('quantityHelp');
+    if (hint) {
+      if (!uniquePerUnit) {
+        hint.textContent = count > 1
+          ? 'All ' + count + ' units share this one property number.'
+          : 'Unique numbering is off. Additional units keep this same property number.';
+      } else {
+        hint.textContent = 'Each unit gets its own property number for individual accountability.';
+      }
+    }
+    if (quantityHelp && isCreate) {
+      quantityHelp.textContent = uniquePerUnit
+        ? 'Qty 2–500 creates a separate property number for each unit.'
+        : 'Qty 2–500 keeps one property number shared by every unit.';
+    }
   }
 
   function buildPropertyNumberUnit(index, count, value, isLast) {
@@ -904,6 +957,9 @@
         return Boolean(primaryPropertyNumberInput()?.value);
       }
       if (response.ok && data.success && (data.property_numbers || data.property_number)) {
+        if (typeof data.unique_per_unit === 'boolean') {
+          uniquePerUnit = data.unique_per_unit;
+        }
         const numbers = data.property_numbers && data.property_numbers.length
           ? data.property_numbers
           : [data.property_number];

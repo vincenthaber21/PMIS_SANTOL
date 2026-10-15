@@ -353,9 +353,14 @@ class EquipmentForm(forms.ModelForm):
         if self.is_create and (quantity is None or quantity < 1):
             raise forms.ValidationError('Quantity is required and must be at least 1.')
         if self.is_create and quantity is not None and quantity > 500:
-            raise forms.ValidationError(
-                'Quantity cannot exceed 500. Each unit is registered with its own property number.'
-            )
+            from .property_number import unique_property_numbers_enabled
+            if unique_property_numbers_enabled():
+                message = (
+                    'Quantity cannot exceed 500. Each unit is registered with its own property number.'
+                )
+            else:
+                message = 'Quantity cannot exceed 500 for a shared property number.'
+            raise forms.ValidationError(message)
         return quantity
 
     def clean_acquisition_cost(self):

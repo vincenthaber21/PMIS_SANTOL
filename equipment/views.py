@@ -17,6 +17,7 @@ from .property_number import (
     preview_property_number,
     save_new_equipment_with_property_number,
     rekey_equipment_for_edit,
+    unique_property_numbers_enabled,
 )
 from .forms import (
     EquipmentForm, EquipmentFilterForm, CategoryForm, EquipmentItemForm, DepartmentForm,
@@ -1134,6 +1135,32 @@ def equipment_create(request):
             equipment = form.save(commit=False)
             equipment.created_by = request.user
             equipment._assignment_changed_by = request.user
+            if not unique_property_numbers_enabled():
+                equipment.quantity = quantity
+                save_new_equipment_with_property_number(equipment)
+                AuditLog.objects.create(
+                    user=request.user, action='CREATE',
+                    model_name='Equipment', object_id=equipment.pk,
+                    details=(
+                        f'Registered: {equipment.name} ({equipment.property_number})'
+                        + (f' — {quantity} units, shared property number' if quantity > 1 else '')
+                    ),
+                )
+                if quantity == 1:
+                    messages.success(
+                        request,
+                        f'Equipment {equipment.name} registered successfully.',
+                    )
+                else:
+                    messages.success(
+                        request,
+                        (
+                            f'Registered {quantity} units of {equipment.name} '
+                            f'under one property number: {equipment.property_number}.'
+                        ),
+                    )
+                return redirect('equipment:detail', pk=equipment.pk)
+
             # Each physical unit is registered separately with its own property number.
             equipment.quantity = 1
             equipment.registration_batch = uuid.uuid4()

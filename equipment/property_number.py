@@ -29,6 +29,14 @@ def _use_legacy_lgu_code():
     return bool(site and site.property_number_use_legacy_lgu_code)
 
 
+def unique_property_numbers_enabled():
+    """True when each physical unit must receive its own property number."""
+    site = _site_settings()
+    if site is None:
+        return True
+    return bool(getattr(site, 'property_number_unique_per_unit', True))
+
+
 def _lgu_code():
     site = _site_settings()
     if site and site.property_number_lgu_code:
@@ -315,12 +323,16 @@ def generate_property_numbers(
     Build ``count`` consecutive property numbers for individual unit registration.
 
     Used when Quantity > 1 so each physical unit gets its own control number.
+    When unique numbering is turned off in Site settings, every unit shares
+    the next single number, so this always returns one value.
     """
     try:
         count = int(count)
     except (TypeError, ValueError):
         count = 1
     count = max(1, min(count, 500))
+    if not unique_property_numbers_enabled():
+        count = 1
 
     base = _property_number_base(
         purchase_date=purchase_date,
@@ -650,10 +662,12 @@ def preview_property_number(
     )
     form_prefix = _form_type_prefix(acquisition_cost=acquisition_cost, category=category)
 
+    unique_per_unit = unique_property_numbers_enabled()
     return {
         'property_number': property_number,
         'property_numbers': property_numbers,
         'count': len(property_numbers),
+        'unique_per_unit': unique_per_unit,
         'prefix': form_prefix,
         'form_prefix': form_prefix,
         'lgu_code': _lgu_code(),

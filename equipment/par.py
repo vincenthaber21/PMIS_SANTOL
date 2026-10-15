@@ -82,12 +82,10 @@ def create_par_for_issuance(
     """
     Create a PAR for PPE issuance. Returns the PAR or None if not PPE.
     Supersedes prior active PARs for the same equipment on reassignment.
+    end_user may be blank when the item is not yet assigned to anyone.
     """
     update_coa_fields(equipment)
     if equipment.classification != CLASSIFICATION_PPE:
-        return None
-
-    if not end_user:
         return None
 
     if reference_type and reference_id is not None:
@@ -119,15 +117,16 @@ def create_par_for_issuance(
 
     supersede_active_pars_for_equipment(equipment, par)
 
+    qty = max(int(equipment.quantity or 1), 1)
     PropertyAcknowledgmentReceiptItem.objects.create(
         par=par,
         equipment=equipment,
-        quantity=1,
+        quantity=qty,
         unit=_equipment_unit(equipment),
         description=_equipment_description(equipment),
         property_number=equipment.property_number,
         date_acquired=equipment.purchase_date,
-        amount=effective_cost(equipment),
+        amount=effective_cost(equipment) * qty,
     )
 
     par.refresh_status()
@@ -144,7 +143,8 @@ def _resolve_par_users(equipment, end_user=None, custodian=None):
 def create_par_for_equipment(equipment, created_by=None):
     """
     Create a PAR when PPE equipment is registered.
-    Returns the PAR or None if the item is not PPE.
+    Returns the PAR or None if the item is not PPE or no supply officer exists.
+    An unassigned item still gets a PAR; Received by stays blank until assignment.
     """
     update_coa_fields(equipment)
     if equipment.classification != CLASSIFICATION_PPE:
@@ -155,7 +155,7 @@ def create_par_for_equipment(equipment, created_by=None):
         return active
 
     end_user, custodian = _resolve_par_users(equipment, custodian=created_by)
-    if not end_user or not custodian:
+    if not custodian:
         return None
 
     return create_par_for_issuance(

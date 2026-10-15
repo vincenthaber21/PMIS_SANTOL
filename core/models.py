@@ -42,6 +42,14 @@ class SiteSettings(models.Model):
             'legacy mode is enabled. Use a numeric code (0621) or a custom prefix (LGU-SANTOL).'
         ),
     )
+    property_number_unique_per_unit = models.BooleanField(
+        default=True,
+        verbose_name='Unique property number per unit',
+        help_text=(
+            'When enabled, registering 10 units creates 10 property numbers. '
+            'When disabled, those 10 units are saved once and share a single property number.'
+        ),
+    )
     property_number_use_legacy_lgu_code = models.BooleanField(
         default=False,
         verbose_name='Use legacy numeric LGU code for property numbers',

@@ -155,10 +155,14 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         }),
         ('Property Number', {
             'fields': (
+                'property_number_unique_per_unit',
                 'property_number_use_legacy_lgu_code',
                 'property_number_lgu_code',
             ),
             'description': (
+                '<strong>Unique property number per unit</strong> controls quantity. '
+                'Enabled: 10 units are saved as 10 records with consecutive numbers. '
+                'Disabled: 10 units are saved as one record that shares a single property number. '
                 'When legacy mode is <strong>disabled</strong>, new property numbers use the '
                 'normal form (e.g. <code>PAR-201-2027-PR-0001</code>). '
                 'When <strong>enabled</strong>, they start with the LGU code below '

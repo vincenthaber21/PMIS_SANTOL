@@ -863,6 +863,8 @@ class PropertyAcknowledgmentReceipt(models.Model):
     end_user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name='par_receipts',
+        null=True, blank=True,
+        help_text='Accountable end-user. Blank until the item is assigned.',
     )
     custodian = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
@@ -886,7 +888,7 @@ class PropertyAcknowledgmentReceipt(models.Model):
         verbose_name_plural = 'Property Acknowledgment Receipts'
 
     def __str__(self):
-        return f'PAR {self.par_no} — {self.end_user}'
+        return f'PAR {self.par_no} — {self.end_user or "Unassigned"}'
 
     def refresh_status(self, save=True):
         """Update status based on renewal date (skip if already superseded)."""
