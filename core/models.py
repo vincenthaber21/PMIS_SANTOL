@@ -1,7 +1,9 @@
 """Core app models: AuditLog, Notification, SiteSettings, and DatabaseDownload."""
+from decimal import Decimal
+
 from django.db import models
 from django.conf import settings
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 
 
 class SiteSettings(models.Model):
@@ -171,6 +173,47 @@ class SiteSettings(models.Model):
             'Default COA Representative shown on printed inventory tags. '
             'Users can change this value before printing.'
         ),
+    )
+    ppe_depreciable_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('95.00'),
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+        verbose_name='Depreciable value (%)',
+        help_text=(
+            'Percent of acquisition cost that is depreciated on the PPE ledger card '
+            '(Appendix 70). 95 leaves a 5% residual value. '
+            'A purchase on days 1–15 starts depreciation in that month; '
+            'day 16 or later starts on the first day of the next month.'
+        ),
+    )
+    ppe_prepared_by_name = models.CharField(
+        max_length=200,
+        blank=True,
+        default='HANS CHRISTOPHER S. TAHADLANGIT',
+        verbose_name='Prepared by',
+        help_text='Name printed on the PPE ledger card “Prepared by” line.',
+    )
+    ppe_prepared_by_position = models.CharField(
+        max_length=200,
+        blank=True,
+        default='Accounting Clerk I',
+        verbose_name='Prepared by position',
+        help_text='Position printed under the PPE ledger card preparer.',
+    )
+    ppe_noted_by_name = models.CharField(
+        max_length=200,
+        blank=True,
+        default='JOANALYN A. MAON, CPA',
+        verbose_name='Noted by',
+        help_text='Name printed on the PPE ledger card “Noted by” line.',
+    )
+    ppe_noted_by_position = models.CharField(
+        max_length=200,
+        blank=True,
+        default='Municipal Accountant',
+        verbose_name='Noted by position',
+        help_text='Position printed under the PPE ledger card noting officer.',
     )
 
     class Meta:

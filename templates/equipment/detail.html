@@ -259,6 +259,29 @@
     .eq-fields--3 .eq-field { border-right: 0 !important; }
   }
 
+  .eq-repair-form {
+    padding: 1rem 1.15rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .eq-repair-form__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    align-items: end;
+  }
+  .eq-repair-form .form-control,
+  .eq-repair-form .form-select {
+    min-height: 42px;
+  }
+  .eq-repair-form__action .btn {
+    min-height: 42px;
+    white-space: nowrap;
+  }
+  @media (max-width: 767px) {
+    .eq-repair-form__grid { grid-template-columns: 1fr; }
+    .eq-repair-form__action .btn { width: 100%; }
+  }
+
   /* History table */
   .eq-section .table { margin: 0; }
   .eq-section .table thead th {
@@ -609,6 +632,21 @@
           {% endif %}
         </div>
       </div>
+
+      <div class="eq-section">
+        <div class="eq-section__head">
+          <h2 class="eq-section__title"><i class="bi bi-journal-bookmark"></i> Property, plant and equipment ledger card</h2>
+          <a href="{% url 'reports:ppe_ledger_excel' equipment.pk %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-file-earmark-excel me-1"></i>Download Ledger
+          </a>
+        </div>
+        <div class="eq-section__body">
+          <p class="eq-note mb-0">
+            Appendix 70 ledger with straight-line depreciation and repair history.
+            <a href="{% url 'reports:ppe_ledger_register' %}">View PPE Ledger</a>
+          </p>
+        </div>
+      </div>
       {% endif %}
 
       {% if equipment.classification != 'PPE' %}
@@ -701,6 +739,82 @@
         </div>
       </div>
       {% endif %}
+
+      <div class="eq-section" id="repair-history">
+        <div class="eq-section__head">
+          <h2 class="eq-section__title"><i class="bi bi-tools"></i> Repair history</h2>
+        </div>
+        {% if repair_form %}
+        <form method="post" action="{% url 'equipment:repair_add' equipment.pk %}" class="eq-repair-form">
+          {% csrf_token %}
+          <div class="eq-repair-form__grid">
+            <div>
+              <label class="eq-field__label" for="{{ repair_form.repair_date.id_for_label }}">Repair date</label>
+              {{ repair_form.repair_date }}
+            </div>
+            <div>
+              <label class="eq-field__label" for="{{ repair_form.nature.id_for_label }}">Nature of repair</label>
+              {{ repair_form.nature }}
+            </div>
+            <div>
+              <label class="eq-field__label" for="{{ repair_form.amount.id_for_label }}">Amount</label>
+              {{ repair_form.amount }}
+            </div>
+            <div class="eq-repair-form__action">
+              <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add repair</button>
+            </div>
+          </div>
+        </form>
+        {% endif %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Repair date</th>
+                <th>Nature of repair</th>
+                <th>Amount</th>
+                <th>Recorded by</th>
+                {% if repair_form %}<th class="text-end"></th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for repair in repairs %}
+              <tr>
+                <td class="text-nowrap">{{ repair.repair_date|date:"M d, Y" }}</td>
+                <td>
+                  {% if repair.nature == 'Major' %}
+                  <span class="badge bg-warning text-dark">Major</span>
+                  {% else %}
+                  <span class="badge bg-info text-dark">Minor</span>
+                  {% endif %}
+                </td>
+                <td>{{ repair.amount|peso }}</td>
+                <td>{% if repair.recorded_by %}{{ repair.recorded_by.get_full_name|default:repair.recorded_by.username }}{% else %}—{% endif %}</td>
+                {% if repair_form %}
+                <td class="text-end">
+                  <form method="post" action="{% url 'equipment:repair_delete' equipment.pk repair.pk %}" class="d-inline" onsubmit="return confirm('Remove this repair from the ledger?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                  </form>
+                </td>
+                {% endif %}
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="{% if repair_form %}5{% else %}4{% endif %}" class="text-center text-muted py-4">No repairs recorded yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="eq-note mb-0">
+          {% if equipment.classification == 'PPE' %}
+          Minor and major repairs appear on this item’s PPE ledger card, in Nature of Repair and Amount.
+          {% else %}
+          These repairs are kept on this item. The PPE ledger lists capitalized PPE only.
+          {% endif %}
+        </p>
+      </div>
 
       <!-- Assignment History -->
       <div class="eq-section">

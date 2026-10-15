@@ -12,7 +12,7 @@ from django.http import JsonResponse, HttpResponse
 from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.views.decorators.clickjacking import xframe_options_sameorigin
-from .models import Equipment, Department, Category, EquipmentItem, PropertyStatus, FundSource, ModeOfProcurement, PaymentMethod, DisposalReason, Supplier
+from .models import Equipment, Department, Category, EquipmentItem, PropertyStatus, FundSource, ModeOfProcurement, PaymentMethod, DisposalReason, Supplier, EquipmentRepair
 from .property_number import (
     preview_property_number,
     save_new_equipment_with_property_number,
@@ -21,7 +21,7 @@ from .property_number import (
 )
 from .forms import (
     EquipmentForm, EquipmentFilterForm, CategoryForm, EquipmentItemForm, DepartmentForm,
-    AssignUserForm, UpdatePropertyStatusForm, PropertyStatusForm, FundSourceForm, ModeOfProcurementForm,
+    AssignUserForm, UpdatePropertyStatusForm, EquipmentRepairForm, PropertyStatusForm, FundSourceForm, ModeOfProcurementForm,
     PaymentMethodForm, DisposalReasonForm, SupplierForm, build_category_equipment_form,
 )
 from .coa import preview_coa_classification, apply_coa_standards_to_all
@@ -478,6 +478,8 @@ def equipment_detail(request, pk):
     from equipment.par import get_active_par_for_equipment
     from equipment.ics import get_active_ics_for_equipment, ensure_ics_for_equipment
     assignment_history = equipment.assignment_history.select_related('changed_by', 'user')
+    repairs = equipment.repairs.select_related('recorded_by')
+    repair_form = EquipmentRepairForm() if _can_manage_equipment(request.user) else None
     active_par = get_active_par_for_equipment(equipment) if equipment.classification == 'PPE' else None
     active_ics = None
     if equipment.classification != 'PPE':
@@ -502,6 +504,8 @@ def equipment_detail(request, pk):
     return render(request, 'equipment/detail.html', {
         'equipment': equipment,
         'assignment_history': assignment_history,
+        'repairs': repairs,
+        'repair_form': repair_form,
         'active_par': active_par,
         'active_ics': active_ics,
         'assign_form': assign_form,
@@ -537,6 +541,61 @@ def equipment_assign_user(request, pk):
             messages.info(request, 'No change to assigned user.')
     else:
         messages.error(request, 'Invalid assigned user selection.')
+    return redirect('equipment:detail', pk=pk)
+
+
+@login_required
+def equipment_repair_add(request, pk):
+    """Record a repair that posts to the PPE ledger card."""
+    if not _can_manage_equipment(request.user):
+        messages.error(request, 'Access denied.')
+        return redirect('equipment:detail', pk=pk)
+
+    equipment = get_object_or_404(Equipment, pk=pk)
+    if request.method != 'POST':
+        return redirect('equipment:detail', pk=pk)
+
+    form = EquipmentRepairForm(request.POST)
+    if form.is_valid():
+        repair = form.save(commit=False)
+        repair.equipment = equipment
+        repair.recorded_by = request.user
+        repair.save()
+        AuditLog.objects.create(
+            user=request.user, action='CREATE',
+            model_name='EquipmentRepair', object_id=str(repair.pk),
+            details=(
+                f'{repair.nature} repair of {repair.amount} on {repair.repair_date} '
+                f'for {equipment.property_number}'
+            ),
+        )
+        messages.success(request, 'Repair recorded. It will appear on the PPE ledger card.')
+    else:
+        errors = '; '.join(
+            err for field_errors in form.errors.values() for err in field_errors
+        )
+        messages.error(request, errors or 'Could not save the repair.')
+    return redirect('equipment:detail', pk=pk)
+
+
+@login_required
+def equipment_repair_delete(request, pk, repair_pk):
+    """Remove a repair from the equipment and the PPE ledger card."""
+    if not _can_manage_equipment(request.user):
+        messages.error(request, 'Access denied.')
+        return redirect('equipment:detail', pk=pk)
+    if request.method != 'POST':
+        return redirect('equipment:detail', pk=pk)
+
+    repair = get_object_or_404(EquipmentRepair, pk=repair_pk, equipment_id=pk)
+    label = f'{repair.nature} repair on {repair.repair_date}'
+    repair.delete()
+    AuditLog.objects.create(
+        user=request.user, action='DELETE',
+        model_name='EquipmentRepair', object_id=str(repair_pk),
+        details=f'Removed {label} from {pk}',
+    )
+    messages.success(request, 'Repair removed.')
     return redirect('equipment:detail', pk=pk)
 
 
@@ -710,6 +769,27 @@ def location_delete(request, pk):
     return redirect('equipment:location_list')
 
 
+def _open_category_id(request):
+    """Category panel to reopen after an article/item change."""
+    raw = (request.GET.get('open') or '').strip()
+    return raw if raw.isdigit() else ''
+
+
+def _redirect_category_list(request, category_pk=None):
+    """Return to the category list, keeping search and the open panel."""
+    params = {}
+    for key in ('search', 'per_page', 'page'):
+        value = (request.POST.get(key) or '').strip()
+        if value:
+            params[key] = value
+    if category_pk and str(category_pk).isdigit():
+        params['open'] = str(category_pk)
+    url = reverse('equipment:category_list')
+    if params:
+        return redirect(f'{url}?{urlencode(params)}')
+    return redirect(url)
+
+
 def _category_list_context(request, equipment_form=None, open_equipment_category=None):
     """Shared context for the category list and category equipment modal."""
     from django.db.models import Prefetch
@@ -758,9 +838,7 @@ def _category_list_context(request, equipment_form=None, open_equipment_category
                 ),
                 Prefetch(
                     'items',
-                    queryset=EquipmentItem.objects.filter(
-                        status=EquipmentItem.STATUS_ACTIVE,
-                    ).order_by('name'),
+                    queryset=EquipmentItem.objects.order_by('name'),
                 ),
             )
         )
@@ -792,6 +870,7 @@ def _category_list_context(request, equipment_form=None, open_equipment_category
         'fund_sources': FundSource.objects.filter(status=FundSource.STATUS_ACTIVE).order_by('name'),
         'equipment_form': equipment_form,
         'open_equipment_category': open_equipment_category,
+        'open_category_id': _open_category_id(request),
     }
 
 
@@ -958,7 +1037,7 @@ def equipment_item_create(request):
                 'category_id': item.category_id,
             })
         messages.success(request, f'Item "{item.name}" added under {item.category.name}.')
-        return redirect('equipment:category_list')
+        return _redirect_category_list(request, item.category_id)
 
     errors = '; '.join(
         err for field_errors in form.errors.values() for err in field_errors
@@ -966,7 +1045,66 @@ def equipment_item_create(request):
     if is_ajax:
         return JsonResponse({'success': False, 'error': errors or 'Invalid input.'}, status=400)
     messages.error(request, errors or 'Could not add item.')
-    return redirect('equipment:category_list')
+    category_id = request.POST.get('category')
+    return _redirect_category_list(request, category_id if str(category_id).isdigit() else None)
+
+
+@login_required
+def equipment_item_edit(request, pk):
+    """Update an article/item catalog name."""
+    if not _can_manage_settings(request.user):
+        messages.error(request, 'Access denied.')
+        return redirect('equipment:category_list')
+
+    obj = get_object_or_404(EquipmentItem, pk=pk)
+    if request.method != 'POST':
+        return _redirect_category_list(request, obj.category_id)
+
+    form = EquipmentItemForm(request.POST, instance=obj)
+    if form.is_valid():
+        obj = form.save()
+        AuditLog.objects.create(
+            user=request.user, action='UPDATE',
+            model_name='EquipmentItem', object_id=obj.pk,
+            details=f'Updated item: {obj.name} under {obj.category.code}',
+        )
+        messages.success(request, f'Item "{obj.name}" updated.')
+    else:
+        errors = '; '.join(err for errs in form.errors.values() for err in errs)
+        messages.error(request, errors or 'Could not update item.')
+    return _redirect_category_list(request, obj.category_id)
+
+
+@login_required
+def equipment_item_delete(request, pk):
+    """Delete an article/item catalog name."""
+    if not _can_manage_settings(request.user):
+        messages.error(request, 'Access denied.')
+        return redirect('equipment:category_list')
+
+    obj = get_object_or_404(EquipmentItem, pk=pk)
+    if request.method != 'POST':
+        return _redirect_category_list(request, obj.category_id)
+
+    label = obj.name
+    category_id = obj.category_id
+    category_code = obj.category.code
+    try:
+        obj.delete()
+    except ProtectedError:
+        messages.error(
+            request,
+            f'Cannot delete "{label}" because it is still in use.',
+        )
+        return _redirect_category_list(request, category_id)
+
+    AuditLog.objects.create(
+        user=request.user, action='DELETE',
+        model_name='EquipmentItem', object_id=pk,
+        details=f'Deleted item: {label} under {category_code}',
+    )
+    messages.success(request, f'Item "{label}" deleted.')
+    return _redirect_category_list(request, category_id)
 
 
 @login_required

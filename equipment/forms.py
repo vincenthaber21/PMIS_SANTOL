@@ -4,7 +4,7 @@ from django.db.models import Q
 from accounts.models import User
 from .models import (
     Equipment, Department, Category, EquipmentItem, PropertyStatus, FundSource, ModeOfProcurement,
-    PaymentMethod, DisposalReason, Supplier,
+    PaymentMethod, DisposalReason, Supplier, EquipmentRepair,
     normalize_equipment_name,
 )
 from .coa import (
@@ -41,6 +41,37 @@ def _coerce_useful_life(value):
     if value in (None, ''):
         return None
     return int(value)
+
+
+class EquipmentRepairForm(forms.ModelForm):
+    class Meta:
+        model = EquipmentRepair
+        fields = ('repair_date', 'nature', 'amount')
+        widgets = {
+            'repair_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'nature': forms.Select(attrs={'class': 'form-select'}),
+            'amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': '0',
+                'step': '0.01',
+                'placeholder': '0.00',
+            }),
+        }
+        labels = {
+            'repair_date': 'Repair date',
+            'nature': 'Nature of repair',
+            'amount': 'Amount',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['nature'].choices = [('', 'Select nature')] + list(EquipmentRepair.NATURE_CHOICES)
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount is not None and amount < 0:
+            raise forms.ValidationError('Amount cannot be negative.')
+        return amount
 
 
 class AssignUserForm(forms.Form):
@@ -452,9 +483,14 @@ class EquipmentItemForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].queryset = Category.objects.filter(
+        category_qs = Category.objects.filter(
             status=Category.STATUS_ACTIVE,
-        ).order_by('code')
+        )
+        if self.instance.pk and self.instance.category_id:
+            category_qs = Category.objects.filter(
+                Q(status=Category.STATUS_ACTIVE) | Q(pk=self.instance.category_id),
+            )
+        self.fields['category'].queryset = category_qs.order_by('code')
         self.fields['category'].widget.attrs.update({'class': 'form-select'})
         self.fields['name'].widget.attrs.update({
             'class': 'form-control text-uppercase',

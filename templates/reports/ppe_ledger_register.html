@@ -1,0 +1,263 @@
+{% extends 'base.html' %}
+{% load pms_tags %}
+
+{% block title %}PPE Ledger Card{% endblock %}
+
+{% block extra_css %}
+<style>
+  .ppe-export-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  .ppe-filter-bar .form-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748B;
+    margin-bottom: 0.35rem;
+  }
+  .ppe-table-empty {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: #94A3B8;
+  }
+  .ppe-table-empty i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-wrap align-items-start justify-content-between gap-3">
+  <div class="d-flex align-items-start">
+    <span class="page-icon"><i class="bi bi-journal-bookmark"></i></span>
+    <div>
+      <h1>PPE Ledger Card</h1>
+      <div class="breadcrumb">
+        <a href="{% url 'reports:index' %}">Reports</a> /
+        <a href="{% url 'reports:coa_forms' %}">COA Forms</a> / PPE Ledger Card
+      </div>
+      <p class="text-muted small mt-2 mb-0">
+        Property, Plant and Equipment ledger cards (Appendix 70) for items at or above the ₱50,000 capitalization threshold.
+        Depreciable value is {{ depreciable_percent }}% of acquisition cost.
+        A purchase on days 1–15 starts depreciation in that month; day 16 or later starts on the first day of the next month.
+        {% if show_all_scope %}
+        Showing all PPE across the organization.
+        {% else %}
+        Showing PPE assigned to you only.
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:var(--primary);">
+      <div class="kpi-top">
+        <span class="kpi-label">PPE Ledger Cards</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--primary);"><i class="bi bi-journal-bookmark"></i></span>
+      </div>
+      <div class="kpi-value">{{ total_count }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:var(--accent);">
+      <div class="kpi-top">
+        <span class="kpi-label">Acquisition Cost</span>
+        <span class="kpi-icon" style="background:var(--brand-surface);color:var(--accent);"><i class="bi bi-cash-stack"></i></span>
+      </div>
+      <div class="kpi-value">{{ total_cost|peso }}</div>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="kpi-card" style="--kpi-accent:#059669;">
+      <div class="kpi-top">
+        <span class="kpi-label">Book Value</span>
+        <span class="kpi-icon" style="background:#ECFDF5;color:#059669;"><i class="bi bi-calculator"></i></span>
+      </div>
+      <div class="kpi-value">{{ total_book|peso }}</div>
+      <div class="kpi-caption">After depreciation posted through today</div>
+    </div>
+  </div>
+</div>
+
+{% if total_count and show_all_scope %}
+<div class="card mb-4">
+  <div class="card-header">
+    <i class="bi bi-download me-2 text-primary"></i>Bulk Export
+    <span class="card-subtitle">Download all filtered ledger cards</span>
+  </div>
+  <div class="card-body">
+    <div class="ppe-export-bar">
+      <a href="{% url 'reports:ppe_ledger_export_all_excel' %}?fund={{ selected_fund }}&year={{ selected_year }}&property_status={{ selected_property_status }}&department={{ selected_department }}"
+         class="btn btn-outline-success btn-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i>Download All Ledger Cards (Excel)
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-funnel me-2 text-primary"></i>Filters</span>
+    {% if selected_fund or selected_year or selected_property_status or selected_department %}
+    <span class="badge-soft badge-soft-info">Active filters applied</span>
+    {% endif %}
+  </div>
+  <div class="card-body ppe-filter-bar">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Fund</label>
+        <select name="fund" class="form-select form-select-sm">
+          <option value="">All Funds</option>
+          {% for val, label in fund_choices %}
+          <option value="{{ val }}" {% if selected_fund == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-2">
+        <label class="form-label">Year</label>
+        <select name="year" class="form-select form-select-sm">
+          <option value="">All Years</option>
+          {% for y in year_choices %}
+          <option value="{{ y }}" {% if selected_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <label class="form-label">Property Status</label>
+        <select name="property_status" class="form-select form-select-sm">
+          <option value="">All Property Status</option>
+          {% for ps in property_status_choices %}
+          <option value="{{ ps.pk }}" {% if selected_property_status == ps.pk|stringformat:"s" %}selected{% endif %}>{{ ps.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-4 col-lg-3">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for dept in department_choices %}
+          <option value="{{ dept.pk }}" {% if selected_department == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 col-lg-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+          <i class="bi bi-search me-1"></i>Apply
+        </button>
+        <a href="{% url 'reports:ppe_ledger_register' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <span><i class="bi bi-table me-2 text-primary"></i>Property, Plant and Equipment Ledger Cards</span>
+    <span class="badge-soft badge-soft-neutral">{{ total_count }} record{{ total_count|pluralize }}</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Property No.</th>
+            <th>Description</th>
+            <th>Fund</th>
+            <th>Date Acquired</th>
+            <th>Acquisition Cost</th>
+            <th>Useful Life</th>
+            <th>Book Value</th>
+            <th>Repair History</th>
+            <th>Accountable Officer</th>
+            <th>Property Status</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for eq in equipment_list %}
+          <tr>
+            <td>
+              <a href="{% url 'equipment:detail' eq.pk %}" class="text-decoration-none">
+                <code class="prop-chip">{{ eq.property_number }}</code>
+              </a>
+            </td>
+            <td>
+              <span class="fw-500">{{ eq.name }}</span>
+              {% if eq.department %}<small class="text-muted d-block">{{ eq.department.name }}</small>{% endif %}
+            </td>
+            <td><small>{{ eq.fund|default:"—" }}</small></td>
+            <td><small>{{ eq.purchase_date|default:"—" }}</small></td>
+            <td><span class="fw-500">{{ eq.ledger.acquisition_cost|peso }}</span></td>
+            <td>
+              {% if eq.ledger.useful_life %}
+              <span>{{ eq.ledger.useful_life }} year{{ eq.ledger.useful_life|pluralize }}</span>
+              {% if eq.ledger.annual_depreciation %}
+              <small class="text-muted d-block">{{ eq.ledger.annual_depreciation|peso }}/yr</small>
+              {% endif %}
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td><span class="fw-500">{{ eq.ledger.book_value|peso }}</span></td>
+            <td>
+              {% if eq.ledger.repair_rows %}
+              <ul class="list-unstyled mb-0 small">
+                {% for row in eq.ledger.repair_rows %}
+                <li>
+                  {{ row.date|date:"M d, Y" }}
+                  · {{ row.repair_nature }}
+                  · {{ row.repair_amount|peso }}
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <small>
+                {% if eq.assigned_user %}
+                {{ eq.assigned_user.get_full_name|default:eq.assigned_user.username }}
+                {% else %}—{% endif %}
+              </small>
+            </td>
+            <td>{{ eq.property_status|property_status_badge }}</td>
+            <td class="text-end">
+              <a href="{% url 'reports:ppe_ledger_excel' eq.pk %}" class="btn btn-sm btn-outline-success" title="Download PPE ledger card">
+                <i class="bi bi-file-earmark-excel me-1"></i>Excel
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="11">
+              <div class="ppe-table-empty">
+                <i class="bi bi-inbox"></i>
+                <div>
+                  {% if show_all_scope %}
+                  No PPE equipment found.
+                  {% else %}
+                  No PPE equipment is assigned to you.
+                  {% endif %}
+                </div>
+                <small>Add PPE items at or above the ₱50,000 capitalization threshold to appear here.</small>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -7,3 +7,27 @@
 
 
 https://github.com/vincenthaber21/PMIS_SANTOL
+
+
+equipment add rapair history in the equipment details input
+
+formula if deprasation value 
+
+strat purchace 1 to 15 days start 16 start of depresation first day the next month 
+
+depreciable value can change 
+
+depreciable_value = 95%
+total cost = 10,000
+usefull_life = 5 year
+
+
+
+dep_cost = ((total_cost * depreciable_value) / usefull_life) * dependig of the year purchance 
+
+accumulated_depreciation = dep_cost + accumulated_depreciation
+
+
+
+head features 
+new template list of equipment under of their asign location

@@ -169,6 +169,12 @@
     <div class="breadcrumb"><a href="{% url 'equipment:list' %}">Equipment</a> / {{ title }}</div>
   </div>
 </div>
+{% if is_create %}
+<p class="text-muted small mb-3" id="equipmentDraftNotice">
+  <i class="bi bi-arrow-clockwise me-1"></i>
+  <span id="equipmentDraftNoticeText">Entries stay if you refresh this page. They clear after you save the equipment.</span>
+</p>
+{% endif %}
 <form
   method="post"
   id="equipmentForm"
@@ -673,6 +679,223 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if is_create %}
+<script>
+(function () {
+  const form = document.getElementById('equipmentForm');
+  if (!form) return;
+
+  const DRAFT_KEY = 'pmis.equipmentCreateDraft.{{ request.user.pk }}';
+  const SAVED_FLAG = 'pmis.equipmentCreateSaved.{{ request.user.pk }}';
+  const hasServerErrors = {{ form.errors|yesno:"true,false" }};
+  const noticeText = document.getElementById('equipmentDraftNoticeText');
+  let dirty = false;
+  let suppressSave = false;
+  let saveTimer = null;
+
+  function shouldSkip(name) {
+    return !name
+      || name === 'csrfmiddlewaretoken'
+      || name === 'purchase_cost'
+      || name === 'property_status'
+      || name === 'property_number'
+      || name.indexOf('property_number_') === 0;
+  }
+
+  function collectDraft() {
+    const data = {};
+    Array.from(form.elements).forEach(function (el) {
+      if (!el.name || shouldSkip(el.name)) return;
+      if (el.type === 'submit' || el.type === 'button' || el.type === 'file') return;
+      if (el.type === 'checkbox') {
+        data[el.name] = el.checked ? 'on' : '';
+      } else if (el.type === 'radio') {
+        if (el.checked) data[el.name] = el.value;
+      } else {
+        data[el.name] = el.value;
+      }
+    });
+    return data;
+  }
+
+  function draftHasValues(data) {
+    return Object.keys(data).some(function (key) {
+      const value = data[key];
+      if (value == null) return false;
+      const text = String(value).trim();
+      if (!text) return false;
+      if (key === 'quantity' && text === '1') return false;
+      return true;
+    });
+  }
+
+  function saveDraft() {
+    if (suppressSave) return;
+    const data = collectDraft();
+    try {
+      if (!draftHasValues(data)) {
+        localStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+    } catch (err) {
+      /* storage unavailable */
+    }
+  }
+
+  function scheduleSave() {
+    dirty = true;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveDraft, 150);
+  }
+
+  function applyValue(el, value, allowNewOption) {
+    if (!el || el.type === 'file') return false;
+    if (el.type === 'checkbox') {
+      el.checked = value === 'on' || value === true;
+      return true;
+    }
+    if (el.type === 'radio') {
+      el.checked = String(el.value) === String(value);
+      return el.checked;
+    }
+    const stringValue = value == null ? '' : String(value);
+    if (el.tagName === 'SELECT') {
+      const hasOption = Array.from(el.options).some(function (opt) {
+        return opt.value === stringValue;
+      });
+      if (!hasOption) {
+        if (!allowNewOption || !stringValue) return false;
+        const option = document.createElement('option');
+        option.value = stringValue;
+        option.textContent = stringValue;
+        el.appendChild(option);
+      }
+      el.value = stringValue;
+      if (el.id === 'id_name') el.disabled = false;
+      return el.value === stringValue;
+    }
+    el.value = stringValue;
+    return true;
+  }
+
+  function applyNamed(name, value, allowNewOption) {
+    const el = form.elements.namedItem(name);
+    if (!el) return false;
+    if (typeof RadioNodeList !== 'undefined' && el instanceof RadioNodeList) {
+      let matched = false;
+      Array.from(el).forEach(function (node) {
+        node.checked = String(node.value) === String(value);
+        if (node.checked) matched = true;
+      });
+      return matched;
+    }
+    return applyValue(el, value, allowNewOption);
+  }
+
+  function restoreDraft() {
+    let raw = null;
+    try {
+      raw = localStorage.getItem(DRAFT_KEY);
+    } catch (err) {
+      return false;
+    }
+    if (!raw) return false;
+
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch (err) {
+      return false;
+    }
+    if (!data || typeof data !== 'object' || !draftHasValues(data)) return false;
+
+    let applied = false;
+    Object.keys(data).forEach(function (name) {
+      if (shouldSkip(name) || name === 'name') return;
+      if (applyNamed(name, data[name], false)) applied = true;
+    });
+    if (Object.prototype.hasOwnProperty.call(data, 'name')) {
+      if (applyNamed('name', data.name, true)) applied = true;
+    }
+    return applied;
+  }
+
+  function setNotice(text) {
+    if (noticeText && text) noticeText.textContent = text;
+  }
+
+  form.addEventListener('input', scheduleSave);
+  form.addEventListener('change', scheduleSave);
+
+  window.addEventListener('pagehide', function () {
+    if (dirty) saveDraft();
+  });
+
+  window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    let justSaved = false;
+    try {
+      justSaved = sessionStorage.getItem(SAVED_FLAG) === '1';
+    } catch (err) {
+      justSaved = false;
+    }
+    if (!justSaved) return;
+    try {
+      sessionStorage.removeItem(SAVED_FLAG);
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (err) {
+      /* storage unavailable */
+    }
+    window.location.reload();
+  });
+
+  let justSaved = false;
+  try {
+    justSaved = sessionStorage.getItem(SAVED_FLAG) === '1';
+  } catch (err) {
+    justSaved = false;
+  }
+
+  if (hasServerErrors) {
+    try { sessionStorage.removeItem(SAVED_FLAG); } catch (err) { /* ignore */ }
+    dirty = true;
+    saveDraft();
+    setNotice('These entries were kept because the equipment was not saved. They stay if you refresh, and clear after a successful save.');
+  } else if (justSaved) {
+    try {
+      sessionStorage.removeItem(SAVED_FLAG);
+      localStorage.removeItem(DRAFT_KEY);
+    } catch (err) {
+      /* storage unavailable */
+    }
+    setNotice('Entries stay if you refresh this page. They clear after you save the equipment.');
+  } else if (restoreDraft()) {
+    dirty = true;
+    setNotice('Unsaved entries were restored. They stay if you refresh, and clear after you save the equipment.');
+  }
+
+  window.__saveEquipmentCreateDraft = function () {
+    if (!dirty || suppressSave) return;
+    saveDraft();
+  };
+
+  window.__clearEquipmentCreateDraftOnSubmit = function (event) {
+    if (event.defaultPrevented) return;
+    if (typeof form.checkValidity === 'function' && !form.checkValidity()) return;
+    suppressSave = true;
+    dirty = false;
+    clearTimeout(saveTimer);
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      sessionStorage.setItem(SAVED_FLAG, '1');
+    } catch (err) {
+      /* storage unavailable */
+    }
+  };
+})();
+</script>
+{% endif %}
 <script>
 (function () {
   const equipmentForm = document.getElementById('equipmentForm');
@@ -1095,6 +1318,9 @@
     }
 
     nameSelect.disabled = !categorySelect.value;
+    if (typeof window.__saveEquipmentCreateDraft === 'function') {
+      window.__saveEquipmentCreateDraft();
+    }
   }
 
   async function loadItemsForCategory(preserveName) {
@@ -1612,6 +1838,17 @@
       paymentMethodErrorEl.classList.add('d-none');
     });
   }
+})();
+</script>
+{% endif %}
+{% if is_create %}
+<script>
+(function () {
+  const equipmentForm = document.getElementById('equipmentForm');
+  if (!equipmentForm || typeof window.__clearEquipmentCreateDraftOnSubmit !== 'function') return;
+  equipmentForm.addEventListener('submit', function (event) {
+    window.__clearEquipmentCreateDraftOnSubmit(event);
+  });
 })();
 </script>
 {% endif %}

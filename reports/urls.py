@@ -15,6 +15,9 @@ urlpatterns = [
     # COA Forms & Ledgers
     path('coa/', coa_views.coa_forms_index, name='coa_forms'),
     path('coa/par-register/', coa_views.par_register, name='par_register'),
+    path('coa/ppe-ledger/', coa_views.ppe_ledger_register, name='ppe_ledger_register'),
+    path('coa/ppe-ledger/all/excel/', coa_views.ppe_ledger_export_all_excel, name='ppe_ledger_export_all_excel'),
+    path('coa/ppe-ledger/<str:equipment_id>/excel/', coa_views.ppe_ledger_excel, name='ppe_ledger_excel'),
     path('coa/par-register/all/', coa_views.par_print_all, name='par_print_all'),
     path('coa/par-register/all/excel/', coa_views.par_export_all_excel, name='par_export_all_excel'),
     path('coa/ics-register/', coa_views.ics_register, name='ics_register'),

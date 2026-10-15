@@ -278,6 +278,93 @@ def par_register(request):
     })
 
 
+def _ppe_ledger_list(request):
+    """Filtered PPE rows for the ledger register, each with a computed Appendix 70 card."""
+    from decimal import Decimal
+
+    from core.models import SiteSettings
+    from equipment.ppe_ledger import build_ppe_ledger
+
+    show_all_scope = _user_sees_all_par_register(request.user)
+    qs, fund, year, property_status, department = _par_register_queryset(request)
+    qs = qs.prefetch_related('repairs')
+    site = SiteSettings.get_solo()
+    equipment_list = list(qs)
+    total_cost = Decimal('0')
+    total_book = Decimal('0')
+    for equipment in equipment_list:
+        card = build_ppe_ledger(equipment, site=site)
+        equipment.ledger = card
+        total_cost += card['acquisition_cost']
+        total_book += card['book_value']
+
+    year_source = get_ppe_equipment()
+    if not show_all_scope:
+        year_source = year_source.filter(assigned_user=request.user)
+    years = (
+        year_source
+        .exclude(purchase_date__isnull=True)
+        .values_list('purchase_date__year', flat=True)
+        .distinct()
+    )
+    year_set = sorted({y for y in years if y}, reverse=True)
+    context = {
+        'equipment_list': equipment_list,
+        'fund_choices': get_fund_choices(),
+        'property_status_choices': PropertyStatus.objects.filter(
+            status=PropertyStatus.STATUS_ACTIVE,
+        ).order_by('name'),
+        'department_choices': Department.objects.order_by('name'),
+        'selected_fund': fund,
+        'selected_year': year,
+        'selected_property_status': property_status,
+        'selected_department': department,
+        'year_choices': year_set,
+        'total_count': len(equipment_list),
+        'total_cost': total_cost,
+        'total_book': total_book,
+        'depreciable_percent': site.ppe_depreciable_percent,
+        'show_all_scope': show_all_scope,
+    }
+    return context, qs, site
+
+
+@reports_login_required
+def ppe_ledger_register(request):
+    """PPE Ledger Card register — Appendix 70 for capitalized property."""
+    context, _qs, _site = _ppe_ledger_list(request)
+    return render(request, 'reports/ppe_ledger_register.html', context)
+
+
+@reports_login_required
+def ppe_ledger_export_all_excel(request):
+    """Download every filtered PPE ledger card in one workbook."""
+    from .ppe_ledger_excel import generate_all_ppe_ledger_excel
+
+    if not _user_sees_all_par_register(request.user):
+        raise Http404('Access denied.')
+    _context, qs, site = _ppe_ledger_list(request)
+    if not qs.exists():
+        raise Http404('No PPE ledger cards match the current filters.')
+    buffer, filename = generate_all_ppe_ledger_excel(qs, site=site)
+    return _excel_response(buffer, filename)
+
+
+@login_required
+def ppe_ledger_excel(request, equipment_id):
+    """Download the Appendix 70 ledger card for one PPE item."""
+    from .ppe_ledger_excel import generate_ppe_ledger_excel
+
+    equipment = get_object_or_404(
+        get_ppe_equipment().prefetch_related('repairs'),
+        pk=equipment_id,
+    )
+    if not request.user.can_view_all_equipment() and equipment.assigned_user_id != request.user.id:
+        raise Http404('Access denied.')
+    buffer, filename = generate_ppe_ledger_excel(equipment)
+    return _excel_response(buffer, filename)
+
+
 @reports_login_required
 def par_print_all(request):
     """Download all filtered PAR records as one combined PAR PDF."""

@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils.translation import ngettext
 from .models import (
     Equipment, Department, Category, EquipmentItem, PropertyStatus, FundSource, ModeOfProcurement, PaymentMethod, DisposalReason, Supplier,
-    EquipmentAssignmentHistory,
+    EquipmentAssignmentHistory, EquipmentRepair,
     ChartOfAccount, AccountingEntry,
     PropertyAcknowledgmentReceipt, PropertyAcknowledgmentReceiptItem,
     InventoryCustodianSlip, InventoryCustodianSlipItem,
@@ -257,6 +257,14 @@ class EquipmentAdmin(admin.ModelAdmin):
             ) % count,
             messages.SUCCESS,
         )
+
+
+@admin.register(EquipmentRepair)
+class EquipmentRepairAdmin(admin.ModelAdmin):
+    list_display = ('equipment', 'repair_date', 'nature', 'amount', 'recorded_by', 'created_at')
+    list_filter = ('nature',)
+    search_fields = ('equipment__name', 'equipment__property_number')
+    autocomplete_fields = ('equipment', 'recorded_by')
 
 
 @admin.register(EquipmentAssignmentHistory)

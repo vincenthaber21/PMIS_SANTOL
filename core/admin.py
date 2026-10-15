@@ -219,6 +219,24 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 'Supplier name is set per equipment / ICS record, not here.'
             ),
         }),
+        ('PPE Ledger Card (Appendix 70)', {
+            'fields': (
+                'ppe_depreciable_percent',
+                'ppe_prepared_by_name',
+                'ppe_prepared_by_position',
+                'ppe_noted_by_name',
+                'ppe_noted_by_position',
+            ),
+            'description': (
+                'Property, Plant and Equipment Ledger Card. '
+                'Depreciable value is the percent of acquisition cost that is depreciated '
+                '(95 leaves a 5% residual). Annual depreciation is that amount divided by '
+                'useful life. A purchase on days 1–15 starts depreciation in the purchase month; '
+                'day 16 or later starts on the first day of the next month. '
+                'The first and last years are prorated by month. '
+                'Completed maintenance records print in the Repair History columns.'
+            ),
+        }),
         ('Inventory Tag Defaults', {
             'fields': (
                 'inventory_tag_date_counted',

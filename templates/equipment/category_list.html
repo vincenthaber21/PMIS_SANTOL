@@ -255,19 +255,55 @@
                                 <th style="width:72px;">#</th>
                                 <th>Article/Item Name</th>
                                 <th>Status</th>
+                                <th class="text-end" style="width:120px;">Actions</th>
                               </tr>
                             </thead>
                             <tbody>
                               {% for catalog_item in item.prefetched_items %}
                               <tr>
                                 <td class="text-muted">{{ forloop.counter }}</td>
-                                <td><span class="cat-item-name-text">{{ catalog_item.name }}</span></td>
+                                <td>
+                                  <button type="button"
+                                          class="cat-item-name btn-edit-item"
+                                          data-bs-toggle="modal"
+                                          data-bs-target="#editCategoryItemModal"
+                                          data-id="{{ catalog_item.pk }}"
+                                          data-name="{{ catalog_item.name }}"
+                                          data-status="{{ catalog_item.status }}"
+                                          data-category="{{ item.pk }}"
+                                          data-category-label="{{ item.code }} — {{ item.name }}">
+                                    {{ catalog_item.name }}
+                                  </button>
+                                </td>
                                 <td>
                                   {% if catalog_item.status == 'Active' %}
                                   <span class="badge-soft badge-soft-success">Active</span>
                                   {% else %}
                                   <span class="badge-soft badge-soft-neutral">Inactive</span>
                                   {% endif %}
+                                </td>
+                                <td class="text-end text-nowrap">
+                                  <div class="cat-row-actions">
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-edit-item" title="Edit"
+                                      data-bs-toggle="modal" data-bs-target="#editCategoryItemModal"
+                                      data-id="{{ catalog_item.pk }}"
+                                      data-name="{{ catalog_item.name }}"
+                                      data-status="{{ catalog_item.status }}"
+                                      data-category="{{ item.pk }}"
+                                      data-category-label="{{ item.code }} — {{ item.name }}">
+                                      <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form method="post" action="{% url 'equipment:item_delete' catalog_item.pk %}" class="d-inline">
+                                      {% csrf_token %}
+                                      <input type="hidden" name="search" value="{{ search }}">
+                                      <input type="hidden" name="per_page" value="{{ per_page }}">
+                                      <input type="hidden" name="page" value="{{ page_obj.number }}">
+                                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"
+                                        onclick="return confirm('Delete article/item &quot;{{ catalog_item.name|escapejs }}&quot;? Registered equipment keeps its current name.');">
+                                        <i class="bi bi-trash"></i>
+                                      </button>
+                                    </form>
+                                  </div>
                                 </td>
                               </tr>
                               {% endfor %}
@@ -445,6 +481,9 @@
       <form method="post" action="{% url 'equipment:item_create' %}" id="addCategoryItemForm">
         {% csrf_token %}
         <input type="hidden" name="category" id="addItemCategoryId" value="">
+        <input type="hidden" name="search" value="{{ search }}">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <input type="hidden" name="page" value="{{ page_obj.number }}">
         <div class="modal-header border-0 pb-0">
           <h5 class="modal-title fw-600" id="addCategoryItemModalLabel">
             <i class="bi bi-box-seam me-2"></i>Add Article/Item Name
@@ -473,6 +512,50 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-plus-circle me-1"></i>Add Item
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editCategoryItemModal" tabindex="-1" aria-labelledby="editCategoryItemModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:12px;">
+      <form method="post" action="" id="editCategoryItemForm">
+        {% csrf_token %}
+        <input type="hidden" name="category" id="editItemCategoryId" value="">
+        <input type="hidden" name="search" value="{{ search }}">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <input type="hidden" name="page" value="{{ page_obj.number }}">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-600" id="editCategoryItemModalLabel">
+            <i class="bi bi-pencil-square me-2"></i>Edit Article/Item Name
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Category</label>
+            <input type="text" class="form-control" id="editItemCategoryLabel" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="editItemName">Article/Item Name *</label>
+            <input type="text" class="form-control text-uppercase" id="editItemName" name="name"
+                   placeholder="e.g. DESKTOP COMPUTER" required>
+          </div>
+          <div>
+            <label class="form-label" for="editItemStatus">Status</label>
+            <select class="form-select" id="editItemStatus" name="status">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i>Save Changes
           </button>
         </div>
       </form>
@@ -841,6 +924,31 @@
       addItemCategoryLabel.value = code ? (code + ' — ' + name) : name;
     });
   });
+
+  const editItemForm = document.getElementById('editCategoryItemForm');
+  const editItemName = document.getElementById('editItemName');
+  const editItemStatus = document.getElementById('editItemStatus');
+  const editItemCategoryId = document.getElementById('editItemCategoryId');
+  const editItemCategoryLabel = document.getElementById('editItemCategoryLabel');
+  const editItemUrlTemplate = '{% url "equipment:item_edit" 0 %}';
+
+  document.querySelectorAll('.btn-edit-item').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const id = btn.getAttribute('data-id');
+      editItemForm.action = editItemUrlTemplate.replace('/0/', '/' + id + '/');
+      editItemName.value = btn.getAttribute('data-name') || '';
+      editItemStatus.value = btn.getAttribute('data-status') || 'Active';
+      editItemCategoryId.value = btn.getAttribute('data-category') || '';
+      editItemCategoryLabel.value = btn.getAttribute('data-category-label') || '';
+    });
+  });
+
+  {% if open_category_id %}
+  const openPanel = document.getElementById('cat-equipment-{{ open_category_id }}');
+  if (openPanel && window.bootstrap) {
+    window.bootstrap.Collapse.getOrCreateInstance(openPanel, { toggle: false }).show();
+  }
+  {% endif %}
 })();
 </script>
 <script>

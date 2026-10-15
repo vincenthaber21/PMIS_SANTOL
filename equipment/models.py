@@ -846,6 +846,35 @@ class EquipmentAssignmentHistory(models.Model):
         return f"{prop_no}: {self.previous_user_name or '—'} → {self.user_name}"
 
 
+class EquipmentRepair(models.Model):
+    """Repair posted to the PPE ledger card repair-history columns."""
+    NATURE_MINOR = 'Minor'
+    NATURE_MAJOR = 'Major'
+    NATURE_CHOICES = [
+        (NATURE_MINOR, 'Minor'),
+        (NATURE_MAJOR, 'Major'),
+    ]
+
+    equipment = models.ForeignKey(
+        Equipment, on_delete=models.CASCADE, related_name='repairs',
+    )
+    repair_date = models.DateField()
+    nature = models.CharField(max_length=10, choices=NATURE_CHOICES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='recorded_equipment_repairs',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-repair_date', '-created_at']
+
+    def __str__(self):
+        prop_no = self.equipment_id or '—'
+        return f'{prop_no}: {self.nature} repair on {self.repair_date}'
+
+
 class PropertyAcknowledgmentReceipt(models.Model):
     """Property Acknowledgment Receipt (COA Circular 2024-006 Annex A.1) for PPE issuance."""
     STATUS_ACTIVE = 'Active'
